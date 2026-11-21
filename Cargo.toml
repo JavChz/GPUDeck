@@ -1,0 +1,20 @@
+[package]
+name = "aero-gpu"
+version = "0.1.0"
+edition = "2021"
+authors = ["Javier Garcia"]
+license = "MPL-2.0"
+description = "Cross-platform GPU thermal, power limit, and throttling monitor"
+
+[[bin]]
+name = "aero-gpu"
+path = "src/main.rs"
+
+[dependencies]
+eframe = "0.31"
+egui = "0.31"
+nvml-wrapper = "0.13"
+serde = { version = "1", features = ["derive"] }
+
+[target.'cfg(target_os = "windows")'.dependencies]
+libloading = "0.8"

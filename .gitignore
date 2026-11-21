@@ -1,0 +1,26 @@
+# Rust / Cargo build artifacts
+/target/
+**/*.rs.bk
+*.pdb
+
+# Note: Cargo.lock is intentionally tracked because this is a binary application.
+
+# IDE / Editors
+.vscode/
+.idea/
+.vs/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+._*
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Logs and local environment files
+*.log
+.env
+.env.local

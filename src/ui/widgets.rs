@@ -1021,7 +1021,7 @@ pub fn draw_arc_gauge(
     unavailable_reason: Option<&str>,
     peak_c: Option<f32>,
 ) {
-    let total_h = size + 20.0;
+    let total_h = size + 35.0;
     let (rect, resp) = ui.allocate_exact_size(Vec2::new(size, total_h), Sense::hover());
     let painter = ui.painter();
 
@@ -1304,11 +1304,70 @@ pub fn draw_arc_gauge(
     }
 
     painter.text(
-        Pos2::new(rect.center().x, rect.bottom() - 8.0),
+        Pos2::new(rect.center().x, rect.bottom() - 22.0),
         Align2::CENTER_CENTER,
         label,
         theme.font_semibold(11.5),
         theme.text_secondary,
+    );
+
+    let tag_y = rect.bottom() - 7.0;
+    let sensor_present = raw_value_c.is_some();
+    let dot_col = if sensor_present {
+        theme.status_healthy
+    } else {
+        with_alpha(theme.text_muted, 110)
+    };
+    let prefix_col = if sensor_present {
+        theme.text_muted
+    } else {
+        with_alpha(theme.text_muted, 125)
+    };
+    let val_col = if sensor_present {
+        theme.text_secondary
+    } else {
+        with_alpha(theme.text_muted, 140)
+    };
+
+    let prefix_galley =
+        painter.layout_no_wrap("Safe ".to_string(), theme.font_regular(10.0), prefix_col);
+    let val_galley = painter.layout_no_wrap(
+        format!("<{}", format_temp(range.healthy_max, use_fahrenheit)),
+        theme.font_mono_bold(10.0),
+        val_col,
+    );
+    let prefix_w = prefix_galley.size().x;
+    let prefix_h = prefix_galley.size().y;
+    let val_w = val_galley.size().x;
+    let val_h = val_galley.size().y;
+
+    let dot_r = 2.5_f32;
+    let dot_gap = 4.5_f32;
+    let total_w = dot_r * 2.0 + dot_gap + prefix_w + val_w;
+    let start_x = rect.center().x - total_w * 0.5;
+
+    if sensor_present && theme.glow_intensity > 0.2 {
+        painter.circle_filled(
+            Pos2::new(start_x + dot_r, tag_y),
+            dot_r + 2.0,
+            with_alpha(
+                theme.status_healthy,
+                (36.0 * theme.glow_intensity).round() as u8,
+            ),
+        );
+    }
+    painter.circle_filled(Pos2::new(start_x + dot_r, tag_y), dot_r, dot_col);
+
+    let prefix_x = start_x + dot_r * 2.0 + dot_gap;
+    painter.galley(
+        Pos2::new(prefix_x, tag_y - prefix_h * 0.5),
+        prefix_galley,
+        prefix_col,
+    );
+    painter.galley(
+        Pos2::new(prefix_x + prefix_w, tag_y - val_h * 0.5),
+        val_galley,
+        val_col,
     );
 
     resp.on_hover_ui(|ui| {

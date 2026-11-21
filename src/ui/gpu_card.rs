@@ -208,7 +208,7 @@ pub fn draw_gpu_card(
                             Stroke::new(1.0_f32, theme.border_subtle)
                         })
                         .corner_radius(inner_cr)
-                        .inner_margin(Margin::symmetric(12, 12))
+                        .inner_margin(Margin::symmetric(12, 10))
                         .show(ui, |ui| {
                             let panel_w = ui.available_width();
                             let gauge_size = ((panel_w - 36.0) / 3.0).clamp(96.0, 142.0);
@@ -254,40 +254,27 @@ pub fn draw_gpu_card(
                                 );
                             });
 
-                            ui.add_space(6.0);
-
-                            let guide_str = format!(
-                                "Healthy: Core <{}  |  Hotspot <{}  |  Memory <{} ({})",
-                                format_temp(gpu.guidelines.core.healthy_max, use_fahrenheit),
-                                format_temp(gpu.guidelines.hotspot.healthy_max, use_fahrenheit),
-                                format_temp(gpu.guidelines.memory.healthy_max, use_fahrenheit),
-                                gpu.guidelines.vram_class,
-                            );
-
-                            ui.horizontal(|ui| {
-                                let delta_w = if gpu.thermals.delta_hotspot_core.is_some() {
-                                    72.0
-                                } else {
-                                    0.0
-                                };
-                                let reset_w = 60.0;
-                                let text_w = (panel_w - delta_w - reset_w - 14.0).max(110.0);
-                                ui.allocate_ui_with_layout(
-                                    Vec2::new(text_w, 18.0),
-                                    egui::Layout::centered_and_justified(
-                                        egui::Direction::LeftToRight,
+                            ui.add_space(4.0);
+                            let (div_rect, _) =
+                                ui.allocate_exact_size(Vec2::new(panel_w, 1.0), Sense::hover());
+                            ui.painter().line_segment(
+                                [
+                                    Pos2::new(div_rect.left(), div_rect.center().y),
+                                    Pos2::new(div_rect.right(), div_rect.center().y),
+                                ],
+                                Stroke::new(
+                                    1.0_f32,
+                                    with_alpha(
+                                        theme.border_subtle,
+                                        if theme.is_dark { 170 } else { 150 },
                                     ),
-                                    |ui| {
-                                        ui.add(
-                                            egui::Label::new(
-                                                egui::RichText::new(guide_str)
-                                                    .font(theme.font_regular(11.0))
-                                                    .color(theme.text_secondary),
-                                            )
-                                            .truncate(),
-                                        );
-                                    },
-                                );
+                                ),
+                            );
+                            ui.add_space(5.0);
+
+                            let pill_h = 20.0_f32;
+                            ui.horizontal(|ui| {
+                                ui.spacing_mut().item_spacing.x = 6.0;
 
                                 if let Some(delta_c) = gpu.thermals.delta_hotspot_core {
                                     let delta_disp = if use_fahrenheit {
@@ -300,10 +287,19 @@ pub fn draw_gpu_card(
                                     } else {
                                         theme.accent_primary
                                     };
-                                    let (d_rect, d_resp) = ui.allocate_exact_size(
-                                        Vec2::new(64.0, 18.0),
-                                        Sense::hover(),
+                                    let delta_txt = format!(
+                                        "ΔT +{:.0}{}",
+                                        delta_disp,
+                                        temp_unit(use_fahrenheit)
                                     );
+                                    let d_galley = ui.painter().layout_no_wrap(
+                                        delta_txt.clone(),
+                                        theme.font_mono_bold(10.0),
+                                        d_col,
+                                    );
+                                    let d_w = (d_galley.size().x + 14.0).max(66.0);
+                                    let (d_rect, d_resp) =
+                                        ui.allocate_exact_size(Vec2::new(d_w, pill_h), Sense::hover());
                                     let d_cr = CornerRadius::same(theme.badge_radius.min(6));
                                     ui.painter().rect_filled(
                                         d_rect,
@@ -319,7 +315,7 @@ pub fn draw_gpu_card(
                                     ui.painter().text(
                                         d_rect.center(),
                                         Align2::CENTER_CENTER,
-                                        format!("ΔT +{:.0}{}", delta_disp, temp_unit(use_fahrenheit)),
+                                        delta_txt,
                                         theme.font_mono_bold(10.0),
                                         d_col,
                                     );
@@ -328,92 +324,250 @@ pub fn draw_gpu_card(
                                     );
                                 }
 
-                                let (r_rect, r_resp) = ui.allocate_exact_size(
-                                    Vec2::new(reset_w, 18.0),
-                                    Sense::click(),
+                                let spec_txt = format!(
+                                    "Spec {}",
+                                    format_temp(gpu.guidelines.core.max_spec, use_fahrenheit)
                                 );
-                                let r_rad = theme.badge_radius.min(6);
-                                let r_cr = CornerRadius::same(r_rad);
-                                let r_col = if theme.gloss_sheen {
-                                    let (top_c, bot_c, bdr_c) = if r_resp.hovered() {
-                                        (
-                                            Color32::from_rgb(11, 122, 209),
-                                            Color32::from_rgb(8, 98, 173),
-                                            Color32::from_rgb(7, 80, 143),
-                                        )
-                                    } else {
-                                        (
-                                            Color32::from_rgb(255, 255, 255),
-                                            Color32::from_rgb(228, 243, 253),
-                                            theme.header_btn_border,
-                                        )
-                                    };
-                                    paint_aero_gel_pill(
-                                        ui.painter(),
-                                        r_rect,
-                                        r_rad,
-                                        top_c,
-                                        bot_c,
-                                        bdr_c,
-                                    );
-                                    if r_resp.hovered() {
-                                        Color32::WHITE
-                                    } else {
-                                        Color32::from_rgb(30, 68, 102)
-                                    }
+                                let s_galley = ui.painter().layout_no_wrap(
+                                    spec_txt.clone(),
+                                    theme.font_mono(10.0),
+                                    theme.text_secondary,
+                                );
+                                let s_w = (s_galley.size().x + 14.0).max(68.0);
+                                let (s_rect, s_resp) =
+                                    ui.allocate_exact_size(Vec2::new(s_w, pill_h), Sense::hover());
+                                let s_cr = CornerRadius::same(theme.badge_radius.min(6));
+                                let (s_fill, s_border, s_text_col) = if theme.gloss_sheen {
+                                    (
+                                        if s_resp.hovered() {
+                                            Color32::from_rgba_unmultiplied(255, 255, 255, 245)
+                                        } else {
+                                            Color32::from_rgba_unmultiplied(245, 251, 255, 225)
+                                        },
+                                        if s_resp.hovered() {
+                                            theme.header_btn_border
+                                        } else {
+                                            theme.border_subtle
+                                        },
+                                        if s_resp.hovered() {
+                                            theme.text_primary
+                                        } else {
+                                            theme.text_secondary
+                                        },
+                                    )
                                 } else {
-                                    let r_bg = if r_resp.hovered() {
+                                    (
                                         with_alpha(
-                                            theme.accent_primary,
-                                            if theme.is_dark { 36 } else { 32 },
-                                        )
-                                    } else {
-                                        theme.bg_card
-                                    };
-                                    let r_border = if r_resp.hovered() {
-                                        theme.accent_primary
-                                    } else {
-                                        theme.border_card
-                                    };
-                                    ui.painter().rect_filled(r_rect, r_cr, r_bg);
-                                    ui.painter().rect_stroke(
-                                        r_rect,
-                                        r_cr,
-                                        Stroke::new(0.9_f32, r_border),
-                                        StrokeKind::Inside,
-                                    );
-                                    if r_resp.hovered() {
-                                        theme.accent_primary
-                                    } else {
-                                        theme.text_secondary
-                                    }
+                                            theme.bg_card,
+                                            if s_resp.hovered() { 245 } else { 215 },
+                                        ),
+                                        if s_resp.hovered() {
+                                            theme.border_card
+                                        } else {
+                                            theme.border_subtle
+                                        },
+                                        if s_resp.hovered() {
+                                            theme.text_primary
+                                        } else {
+                                            theme.text_secondary
+                                        },
+                                    )
                                 };
-                                paint_reset_icon(
-                                    ui.painter(),
-                                    Pos2::new(r_rect.left() + 11.0, r_rect.center().y),
-                                    4.0,
-                                    r_col,
+                                ui.painter().rect_filled(s_rect, s_cr, s_fill);
+                                ui.painter().rect_stroke(
+                                    s_rect,
+                                    s_cr,
+                                    Stroke::new(0.9_f32, s_border),
+                                    StrokeKind::Inside,
                                 );
                                 ui.painter().text(
-                                    Pos2::new(r_rect.left() + 19.0, r_rect.center().y),
-                                    Align2::LEFT_CENTER,
-                                    "Reset",
-                                    theme.font_semibold(10.0),
-                                    if theme.gloss_sheen {
-                                        r_col
-                                    } else if r_resp.hovered() {
-                                        theme.text_primary
+                                    s_rect.center(),
+                                    Align2::CENTER_CENTER,
+                                    spec_txt,
+                                    theme.font_mono(10.0),
+                                    s_text_col,
+                                );
+                                s_resp.on_hover_ui(|ui| {
+                                    ui.set_min_width(225.0);
+                                    ui.label(
+                                        egui::RichText::new("Thermal Thresholds")
+                                            .font(theme.font_bold(12.5))
+                                            .color(theme.accent_primary),
+                                    );
+                                    ui.add_space(4.0);
+                                    ui.label(format!(
+                                        "Core: Safe <{}  •  Max Spec {}",
+                                        format_temp(gpu.guidelines.core.healthy_max, use_fahrenheit),
+                                        format_temp(gpu.guidelines.core.max_spec, use_fahrenheit),
+                                    ));
+                                    ui.label(format!(
+                                        "Hotspot: Safe <{}  •  Max Spec {}",
+                                        format_temp(
+                                            gpu.guidelines.hotspot.healthy_max,
+                                            use_fahrenheit
+                                        ),
+                                        format_temp(gpu.guidelines.hotspot.max_spec, use_fahrenheit),
+                                    ));
+                                    ui.label(format!(
+                                        "Memory ({}): Safe <{}  •  Max Spec {}",
+                                        gpu.guidelines.vram_class,
+                                        format_temp(
+                                            gpu.guidelines.memory.healthy_max,
+                                            use_fahrenheit
+                                        ),
+                                        format_temp(gpu.guidelines.memory.max_spec, use_fahrenheit),
+                                    ));
+
+                                    let mut hw_lines = Vec::new();
+                                    if let Some(t) = gpu.thermals.hw_target_temp {
+                                        hw_lines.push(format!(
+                                            "Target: {}",
+                                            format_temp(t, use_fahrenheit)
+                                        ));
+                                    }
+                                    if let Some(t) = gpu.thermals.hw_max_operating_temp {
+                                        hw_lines.push(format!(
+                                            "Max Operating: {}",
+                                            format_temp(t, use_fahrenheit)
+                                        ));
+                                    }
+                                    if let Some(t) = gpu.thermals.hw_slowdown_temp {
+                                        hw_lines.push(format!(
+                                            "Slowdown: {}",
+                                            format_temp(t, use_fahrenheit)
+                                        ));
+                                    }
+                                    if let Some(t) = gpu.thermals.hw_shutdown_temp {
+                                        hw_lines.push(format!(
+                                            "Shutdown: {}",
+                                            format_temp(t, use_fahrenheit)
+                                        ));
+                                    }
+                                    if let Some(t) = gpu.thermals.hw_memory_max_temp {
+                                        hw_lines.push(format!(
+                                            "Memory Max: {}",
+                                            format_temp(t, use_fahrenheit)
+                                        ));
+                                    }
+                                    if !hw_lines.is_empty() {
+                                        ui.add_space(4.0);
+                                        ui.separator();
+                                        ui.label(
+                                            egui::RichText::new(format!(
+                                                "Driver Limits: {}",
+                                                hw_lines.join("  •  ")
+                                            ))
+                                            .font(theme.font_regular(10.5))
+                                            .color(theme.text_secondary),
+                                        );
+                                        ui.label(
+                                            egui::RichText::new("Source: Live GPU driver limits")
+                                                .font(theme.font_regular(10.0))
+                                                .color(theme.text_muted),
+                                        );
                                     } else {
-                                        theme.text_secondary
+                                        ui.add_space(4.0);
+                                        ui.label(
+                                            egui::RichText::new(
+                                                "Source: Architecture reference defaults",
+                                            )
+                                            .font(theme.font_regular(10.0))
+                                            .color(theme.text_muted),
+                                        );
+                                    }
+                                });
+
+                                ui.with_layout(
+                                    egui::Layout::right_to_left(egui::Align::Center),
+                                    |ui| {
+                                        let (r_rect, r_resp) = ui.allocate_exact_size(
+                                            Vec2::new(62.0, pill_h),
+                                            Sense::click(),
+                                        );
+                                        let r_rad = theme.badge_radius.min(6);
+                                        let r_cr = CornerRadius::same(r_rad);
+                                        let r_col = if theme.gloss_sheen {
+                                            let (top_c, bot_c, bdr_c) = if r_resp.hovered() {
+                                                (
+                                                    Color32::from_rgb(11, 122, 209),
+                                                    Color32::from_rgb(8, 98, 173),
+                                                    Color32::from_rgb(7, 80, 143),
+                                                )
+                                            } else {
+                                                (
+                                                    Color32::from_rgb(255, 255, 255),
+                                                    Color32::from_rgb(228, 243, 253),
+                                                    theme.header_btn_border,
+                                                )
+                                            };
+                                            paint_aero_gel_pill(
+                                                ui.painter(),
+                                                r_rect,
+                                                r_rad,
+                                                top_c,
+                                                bot_c,
+                                                bdr_c,
+                                            );
+                                            if r_resp.hovered() {
+                                                Color32::WHITE
+                                            } else {
+                                                Color32::from_rgb(30, 68, 102)
+                                            }
+                                        } else {
+                                            let r_bg = if r_resp.hovered() {
+                                                with_alpha(
+                                                    theme.accent_primary,
+                                                    if theme.is_dark { 36 } else { 32 },
+                                                )
+                                            } else {
+                                                theme.bg_card
+                                            };
+                                            let r_border = if r_resp.hovered() {
+                                                theme.accent_primary
+                                            } else {
+                                                theme.border_card
+                                            };
+                                            ui.painter().rect_filled(r_rect, r_cr, r_bg);
+                                            ui.painter().rect_stroke(
+                                                r_rect,
+                                                r_cr,
+                                                Stroke::new(0.9_f32, r_border),
+                                                StrokeKind::Inside,
+                                            );
+                                            if r_resp.hovered() {
+                                                theme.accent_primary
+                                            } else {
+                                                theme.text_secondary
+                                            }
+                                        };
+                                        paint_reset_icon(
+                                            ui.painter(),
+                                            Pos2::new(r_rect.left() + 12.0, r_rect.center().y),
+                                            4.0,
+                                            r_col,
+                                        );
+                                        ui.painter().text(
+                                            Pos2::new(r_rect.left() + 20.0, r_rect.center().y),
+                                            Align2::LEFT_CENTER,
+                                            "Reset",
+                                            theme.font_semibold(10.0),
+                                            if theme.gloss_sheen {
+                                                r_col
+                                            } else if r_resp.hovered() {
+                                                theme.text_primary
+                                            } else {
+                                                theme.text_secondary
+                                            },
+                                        );
+                                        let r_resp = r_resp.on_hover_text(format!(
+                                            "Reset recorded max temperatures for GPU {}",
+                                            gpu.index
+                                        ));
+                                        if r_resp.clicked() {
+                                            reset_clicked = true;
+                                        }
                                     },
                                 );
-                                let r_resp = r_resp.on_hover_text(format!(
-                                    "Reset recorded max temperatures for GPU {}",
-                                    gpu.index
-                                ));
-                                if r_resp.clicked() {
-                                    reset_clicked = true;
-                                }
                             });
                         });
                     if let Some(idx) = therm_bg_idx {

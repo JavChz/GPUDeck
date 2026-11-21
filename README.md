@@ -6,6 +6,8 @@
 
 A cross-platform (Windows & Linux) multi-GPU thermal, power limit, and throttling dashboard built in Rust with `eframe`/`egui`.
 
+![GPUDeck Multi-GPU Dashboard (Neo theme)](assets/screenshots/gpudeck-neo.jpg)
+
 ## Features
 
 - **Multi-GPU Live Grid**: Displays all detected GPUs simultaneously without switching tabs or clicking.

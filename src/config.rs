@@ -21,18 +21,36 @@ impl Default for AppConfig {
     }
 }
 
-fn app_config_dir() -> Option<PathBuf> {
+fn config_dir_named(app_name: &str) -> Option<PathBuf> {
     #[cfg(target_os = "windows")]
     {
-        std::env::var_os("APPDATA").map(|p| PathBuf::from(p).join("aero-gpu"))
+        std::env::var_os("APPDATA").map(|p| PathBuf::from(p).join(app_name))
     }
     #[cfg(not(target_os = "windows"))]
     {
         std::env::var_os("XDG_CONFIG_HOME")
             .map(PathBuf::from)
             .or_else(|| std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".config")))
-            .map(|p| p.join("aero-gpu"))
+            .map(|p| p.join(app_name))
     }
+}
+
+fn app_config_dir() -> Option<PathBuf> {
+    config_dir_named("gpudeck")
+}
+
+fn legacy_config_dir() -> Option<PathBuf> {
+    config_dir_named("aero-gpu")
+}
+
+fn read_with_legacy_fallback(primary: Option<PathBuf>, file_name: &str) -> Option<String> {
+    if let Some(path) = primary {
+        if let Ok(contents) = fs::read_to_string(path) {
+            return Some(contents);
+        }
+    }
+    let legacy_path = legacy_config_dir().map(|d| d.join(file_name))?;
+    fs::read_to_string(legacy_path).ok()
 }
 
 pub fn config_path() -> Option<PathBuf> {
@@ -45,10 +63,7 @@ pub fn records_path() -> Option<PathBuf> {
 
 impl AppConfig {
     pub fn load() -> Self {
-        let Some(path) = config_path() else {
-            return Self::default();
-        };
-        let Ok(contents) = fs::read_to_string(path) else {
+        let Some(contents) = read_with_legacy_fallback(config_path(), "settings.cfg") else {
             return Self::default();
         };
         parse_config(&contents)
@@ -115,10 +130,7 @@ pub struct GpuTempRecord {
 }
 
 pub fn load_records() -> HashMap<String, GpuTempRecord> {
-    let Some(path) = records_path() else {
-        return HashMap::new();
-    };
-    let Ok(contents) = fs::read_to_string(path) else {
+    let Some(contents) = read_with_legacy_fallback(records_path(), "records.cfg") else {
         return HashMap::new();
     };
     parse_records(&contents)

@@ -9,7 +9,7 @@ use std::sync::Arc;
 use config::AppConfig;
 use telemetry::{PowerLimitMode, TelemetryManager};
 use ui::theme::ThemeId;
-use ui::AeroGpuApp;
+use ui::GpuDeckApp;
 
 fn main() -> eframe::Result<()> {
     let mut probe = false;
@@ -47,15 +47,20 @@ fn main() -> eframe::Result<()> {
             }
             "--help" | "-h" => {
                 println!(
-                    "AERO-GPU - GPU Thermal, Power Limit & Throttling Monitor\n\
-                     Usage: aero-gpu [OPTIONS]\n\n\
+                    "GPUDeck - Multi-GPU Thermal, Power Limit & Throttling Dashboard\n\
+                     Usage: gpudeck [OPTIONS]\n\n\
                      Options:\n\
                        --probe            Print detected GPU telemetry once to stdout and exit\n\
                        --theme <name>     Start with a specific theme ({})\n\
                        --interval <ms>    Polling interval in milliseconds (default: 1000)\n\
+                       -V, --version      Show application version\n\
                        -h, --help         Show this help message",
                     valid_theme_list()
                 );
+                return Ok(());
+            }
+            "-V" | "--version" => {
+                println!("gpudeck {}", env!("CARGO_PKG_VERSION"));
                 return Ok(());
             }
             _ => {}
@@ -69,7 +74,7 @@ fn main() -> eframe::Result<()> {
 
     let icon = Arc::new(build_app_icon());
     let viewport = egui::ViewportBuilder::default()
-        .with_title("AERO-GPU")
+        .with_title("GPUDeck")
         .with_inner_size([1280.0, 720.0])
         .with_min_inner_size([640.0, 540.0])
         .with_icon(icon);
@@ -80,9 +85,9 @@ fn main() -> eframe::Result<()> {
     };
 
     eframe::run_native(
-        "AERO-GPU",
+        "GPUDeck",
         options,
-        Box::new(move |cc| Ok(Box::new(AeroGpuApp::new(cc, config)))),
+        Box::new(move |cc| Ok(Box::new(GpuDeckApp::new(cc, config)))),
     )
 }
 
@@ -96,7 +101,7 @@ fn valid_theme_list() -> String {
 
 fn run_probe() {
     let (gpus, notes) = TelemetryManager::probe_once();
-    println!("=== AERO-GPU Hardware Probe ===");
+    println!("=== GPUDeck Hardware Probe ===");
     for note in &notes {
         println!("[diag] {note}");
     }

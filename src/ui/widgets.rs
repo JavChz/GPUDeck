@@ -3,8 +3,8 @@ use std::f32::consts::PI;
 
 use egui::epaint::{Mesh, Vertex, WHITE_UV};
 use egui::{
-    Align2, Color32, CornerRadius, Painter, Pos2, Rect, Response, Sense, Shape, Stroke,
-    StrokeKind, Ui, Vec2,
+    Align2, Color32, CornerRadius, Painter, Pos2, Rect, Response, Sense, Shape, Stroke, StrokeKind,
+    Ui, Vec2,
 };
 
 use super::theme::{
@@ -106,13 +106,12 @@ pub fn paint_ambient_backdrop(painter: &Painter, rect: Rect, theme: &ThemeSpec) 
                 (0.94, 0.46, 20.0),
             ];
             for (fx, fy, r) in bubbles {
-                let c = Pos2::new(rect.left() + rect.width() * fx, rect.top() + rect.height() * fy);
-                painter.circle_filled(c, r, with_alpha(Color32::WHITE, 20));
-                painter.circle_stroke(
-                    c,
-                    r,
-                    Stroke::new(1.0_f32, with_alpha(Color32::WHITE, 70)),
+                let c = Pos2::new(
+                    rect.left() + rect.width() * fx,
+                    rect.top() + rect.height() * fy,
                 );
+                painter.circle_filled(c, r, with_alpha(Color32::WHITE, 20));
+                painter.circle_stroke(c, r, Stroke::new(1.0_f32, with_alpha(Color32::WHITE, 70)));
                 painter.circle_filled(
                     Pos2::new(c.x - r * 0.32, c.y - r * 0.34),
                     r * 0.20,
@@ -133,7 +132,10 @@ pub fn paint_ambient_backdrop(painter: &Painter, rect: Rect, theme: &ThemeSpec) 
                 (0.50, 0.92, 10.0, theme.accent_primary, true),
             ];
             for (fx, fy, size, col, is_star) in accents {
-                let c = Pos2::new(rect.left() + rect.width() * fx, rect.top() + rect.height() * fy);
+                let c = Pos2::new(
+                    rect.left() + rect.width() * fx,
+                    rect.top() + rect.height() * fy,
+                );
                 if is_star {
                     paint_sparkle(painter, c, size, with_alpha(col, 95));
                 } else {
@@ -302,7 +304,7 @@ pub fn draw_header_bar(
     // Center title treatment per HeaderStyle
     match theme.header_style {
         HeaderStyle::CyberTrapezoid => {
-            let trap_w = (avail_w * 0.26).clamp(196.0, 290.0);
+            let trap_w = (avail_w * 0.22).clamp(176.0, 240.0);
             let top_inset = 18.0;
             let trap_rect = Rect::from_center_size(
                 Pos2::new(rect.center().x, rect.center().y - 2.0),
@@ -323,8 +325,22 @@ pub fn draw_header_bar(
             let bl = Pos2::new(trap_rect.left() + top_inset, trap_rect.bottom());
             let bm = Pos2::new(trap_rect.center().x, trap_rect.bottom());
             let br = Pos2::new(trap_rect.right() - top_inset, trap_rect.bottom());
-            paint_gradient_line(painter, bl, bm, 3.0, theme.accent_primary, theme.accent_secondary);
-            paint_gradient_line(painter, bm, br, 3.0, theme.accent_secondary, theme.accent_tertiary);
+            paint_gradient_line(
+                painter,
+                bl,
+                bm,
+                3.0,
+                theme.accent_primary,
+                theme.accent_secondary,
+            );
+            paint_gradient_line(
+                painter,
+                bm,
+                br,
+                3.0,
+                theme.accent_secondary,
+                theme.accent_tertiary,
+            );
             paint_gradient_line(
                 painter,
                 bl,
@@ -341,11 +357,11 @@ pub fn draw_header_bar(
                 with_alpha(theme.accent_secondary, 38),
                 with_alpha(theme.accent_tertiary, 38),
             );
-            paint_brand_title(painter, trap_rect.center(), theme, Color32::from_rgb(251, 146, 60));
+            paint_brand_title(painter, trap_rect.center(), theme);
         }
 
         HeaderStyle::AeroGlassBar => {
-            let pill = Rect::from_center_size(rect.center(), Vec2::new(224.0, 33.0));
+            let pill = Rect::from_center_size(rect.center(), Vec2::new(168.0, 33.0));
             painter.rect_filled(
                 pill.translate(Vec2::new(0.0, 1.5)),
                 CornerRadius::same(16),
@@ -363,7 +379,7 @@ pub fn draw_header_bar(
         }
 
         HeaderStyle::KawaiiRibbon => {
-            let pill = Rect::from_center_size(rect.center(), Vec2::new(226.0, 34.0));
+            let pill = Rect::from_center_size(rect.center(), Vec2::new(172.0, 34.0));
             painter.rect_filled(
                 pill,
                 CornerRadius::same(17),
@@ -387,14 +403,14 @@ pub fn draw_header_bar(
                 6.0,
                 theme.accent_secondary,
             );
-            paint_brand_title(painter, pill.center(), theme, theme.accent_secondary);
+            paint_brand_title(painter, pill.center(), theme);
         }
 
         HeaderStyle::TerminalBar => {
             painter.text(
                 rect.center(),
                 Align2::CENTER_CENTER,
-                "[ AERO-GPU :: LIVE TELEMETRY ]",
+                "[ GPUDECK :: LIVE TELEMETRY ]",
                 theme.font_mono_bold(15.0),
                 theme.header_text_primary,
             );
@@ -409,19 +425,19 @@ pub fn draw_header_bar(
                 theme.accent_tertiary,
                 theme.accent_secondary,
             );
-            paint_brand_title(painter, rect.center(), theme, theme.accent_tertiary);
+            paint_brand_title(painter, rect.center(), theme);
         }
 
         HeaderStyle::CleanModern => {
             paint_gradient_line(
                 painter,
-                Pos2::new(rect.center().x - 95.0, rect.bottom() - 1.5),
-                Pos2::new(rect.center().x + 95.0, rect.bottom() - 1.5),
+                Pos2::new(rect.center().x - 68.0, rect.bottom() - 1.5),
+                Pos2::new(rect.center().x + 68.0, rect.bottom() - 1.5),
                 2.0,
                 theme.accent_primary,
                 theme.accent_secondary,
             );
-            paint_brand_title(painter, rect.center(), theme, theme.accent_primary);
+            paint_brand_title(painter, rect.center(), theme);
         }
     }
 
@@ -516,12 +532,16 @@ pub fn draw_header_bar(
     // Theme dropdown selector pill
     if avail_w > 540.0 {
         let name = theme.id.display_name();
-        let name_galley = ui
-            .painter()
-            .layout_no_wrap(name.to_string(), theme.font_semibold(12.0), theme.header_text_primary);
+        let name_galley = ui.painter().layout_no_wrap(
+            name.to_string(),
+            theme.font_semibold(12.0),
+            theme.header_text_primary,
+        );
         let btn_w = (name_galley.size().x + 38.0).clamp(92.0, 146.0);
-        let theme_rect =
-            Rect::from_center_size(Pos2::new(cursor_x - btn_w * 0.5, cy), Vec2::new(btn_w, btn_h));
+        let theme_rect = Rect::from_center_size(
+            Pos2::new(cursor_x - btn_w * 0.5, cy),
+            Vec2::new(btn_w, btn_h),
+        );
         cursor_x -= btn_w + 7.0;
         result.theme_btn_rect = theme_rect;
         let theme_resp = paint_theme_pill_button(ui, theme, theme_rect, theme_menu_open)
@@ -534,12 +554,15 @@ pub fn draw_header_bar(
     // Global Reset Max Records button
     if avail_w >= 960.0 {
         let reset_w = 88.0;
-        let reset_rect =
-            Rect::from_center_size(Pos2::new(cursor_x - reset_w * 0.5, cy), Vec2::new(reset_w, btn_h));
-        let reset_resp = paint_icon_label_button(ui, theme, reset_rect, "Reset Max", |p, c, col| {
-            paint_reset_icon(p, c, 5.2, col);
-        })
-        .on_hover_text("Reset recorded max temperatures for all GPUs");
+        let reset_rect = Rect::from_center_size(
+            Pos2::new(cursor_x - reset_w * 0.5, cy),
+            Vec2::new(reset_w, btn_h),
+        );
+        let reset_resp =
+            paint_icon_label_button(ui, theme, reset_rect, "Reset Max", |p, c, col| {
+                paint_reset_icon(p, c, 5.2, col);
+            })
+            .on_hover_text("Reset recorded max temperatures for all GPUs");
         if reset_resp.clicked() {
             result.reset_all_records = true;
         }
@@ -558,55 +581,36 @@ pub fn draw_header_bar(
     result
 }
 
-fn paint_brand_title(painter: &Painter, center: Pos2, theme: &ThemeSpec, rust_col: Color32) {
-    let aero_galley = painter.layout_no_wrap(
-        "AERO-GPU".to_string(),
+fn paint_brand_title(painter: &Painter, center: Pos2, theme: &ThemeSpec) {
+    let brand_galley = painter.layout_no_wrap(
+        "GPUDECK".to_string(),
         theme.font_bold(17.5),
         theme.header_text_primary,
     );
-    let rust_galley = painter.layout_no_wrap(
-        " (Rust)".to_string(),
-        theme.font_semibold(14.5),
-        rust_col,
+    let pos = Pos2::new(
+        center.x - brand_galley.size().x * 0.5,
+        center.y - brand_galley.size().y * 0.5,
     );
-    let total_w = aero_galley.size().x + rust_galley.size().x;
-    let start_x = center.x - total_w * 0.5;
-    let text_y = center.y - aero_galley.size().y * 0.5;
-    painter.galley(Pos2::new(start_x, text_y), aero_galley.clone(), theme.header_text_primary);
-    painter.galley(
-        Pos2::new(start_x + aero_galley.size().x, text_y + 2.0),
-        rust_galley,
-        rust_col,
-    );
+    painter.galley(pos, brand_galley, theme.header_text_primary);
 }
 
 fn paint_aero_brand_title(painter: &Painter, center: Pos2, theme: &ThemeSpec) {
-    let rust_mint = Color32::from_rgb(204, 251, 241);
-    let aero_galley = painter.layout_no_wrap(
-        "AERO-GPU".to_string(),
+    let brand_galley = painter.layout_no_wrap(
+        "GPUDECK".to_string(),
         theme.font_bold(17.5),
         Color32::WHITE,
     );
-    let rust_galley = painter.layout_no_wrap(
-        " (Rust)".to_string(),
-        theme.font_semibold(14.5),
-        rust_mint,
-    );
-    let total_w = aero_galley.size().x + rust_galley.size().x;
-    let start_x = center.x - total_w * 0.5;
-    let text_y = center.y - aero_galley.size().y * 0.5;
     let shadow_col = Color32::from_rgba_unmultiplied(4, 24, 52, 130);
+    let pos = Pos2::new(
+        center.x - brand_galley.size().x * 0.5,
+        center.y - brand_galley.size().y * 0.5,
+    );
     painter.galley(
-        Pos2::new(start_x, text_y + 1.0),
-        painter.layout_no_wrap("AERO-GPU".to_string(), theme.font_bold(17.5), shadow_col),
+        Pos2::new(pos.x, pos.y + 1.0),
+        painter.layout_no_wrap("GPUDECK".to_string(), theme.font_bold(17.5), shadow_col),
         shadow_col,
     );
-    painter.galley(Pos2::new(start_x, text_y), aero_galley.clone(), Color32::WHITE);
-    painter.galley(
-        Pos2::new(start_x + aero_galley.size().x, text_y + 2.0),
-        rust_galley,
-        rust_mint,
-    );
+    painter.galley(pos, brand_galley, Color32::WHITE);
 }
 
 fn aero_btn_palette(active_state: bool, theme: &ThemeSpec) -> (Color32, Color32, Color32) {
@@ -625,12 +629,7 @@ fn aero_btn_palette(active_state: bool, theme: &ThemeSpec) -> (Color32, Color32,
     }
 }
 
-fn paint_theme_pill_button(
-    ui: &mut Ui,
-    theme: &ThemeSpec,
-    rect: Rect,
-    open: bool,
-) -> Response {
+fn paint_theme_pill_button(ui: &mut Ui, theme: &ThemeSpec, rect: Rect, open: bool) -> Response {
     let resp = ui.allocate_rect(rect, Sense::click());
     let hovered = resp.hovered();
     let painter = ui.painter();
@@ -856,7 +855,11 @@ where
         };
         (ic, theme.header_text_primary)
     };
-    draw_icon(painter, Pos2::new(rect.left() + 13.0, rect.center().y), icon_col);
+    draw_icon(
+        painter,
+        Pos2::new(rect.left() + 13.0, rect.center().y),
+        icon_col,
+    );
     painter.text(
         Pos2::new(rect.left() + 23.0, rect.center().y),
         Align2::LEFT_CENTER,
@@ -926,11 +929,9 @@ pub fn draw_status_badge(
         theme.font_regular(10.5),
         with_alpha(text_col, 230),
     );
-    let title_galley = ui.painter().layout_no_wrap(
-        badge.label().to_string(),
-        theme.font_bold(12.5),
-        text_col,
-    );
+    let title_galley =
+        ui.painter()
+            .layout_no_wrap(badge.label().to_string(), theme.font_bold(12.5), text_col);
 
     let w = (sub_galley.size().x.max(title_galley.size().x) + 22.0).clamp(116.0, 238.0);
     let h = 40.0;
@@ -973,14 +974,20 @@ pub fn draw_status_badge(
         paint_aero_gel_pill(painter, rect, theme.badge_radius, top_c, bot_c, bdr_c);
         let shadow_col = Color32::from_rgba_unmultiplied(0, 0, 0, 100);
         painter.text(
-            Pos2::new(rect.center().x, rect.top() + 5.0 + title_galley.size().y * 0.5 + 1.0),
+            Pos2::new(
+                rect.center().x,
+                rect.top() + 5.0 + title_galley.size().y * 0.5 + 1.0,
+            ),
             Align2::CENTER_CENTER,
             badge.label(),
             theme.font_bold(12.5),
             shadow_col,
         );
         painter.text(
-            Pos2::new(rect.center().x, rect.top() + 21.0 + sub_galley.size().y * 0.5 + 1.0),
+            Pos2::new(
+                rect.center().x,
+                rect.top() + 21.0 + sub_galley.size().y * 0.5 + 1.0,
+            ),
             Align2::CENTER_CENTER,
             subtitle,
             theme.font_regular(10.5),
@@ -997,12 +1004,18 @@ pub fn draw_status_badge(
     }
 
     painter.galley(
-        Pos2::new(rect.center().x - title_galley.size().x * 0.5, rect.top() + 5.0),
+        Pos2::new(
+            rect.center().x - title_galley.size().x * 0.5,
+            rect.top() + 5.0,
+        ),
         title_galley,
         text_col,
     );
     painter.galley(
-        Pos2::new(rect.center().x - sub_galley.size().x * 0.5, rect.top() + 21.0),
+        Pos2::new(
+            rect.center().x - sub_galley.size().x * 0.5,
+            rect.top() + 21.0,
+        ),
         sub_galley,
         text_col,
     );
@@ -1103,7 +1116,16 @@ pub fn draw_arc_gauge(
                 theme.font_mono_bold((size * 0.21).clamp(17.0, 27.0)),
                 theme.text_primary,
             );
-            paint_peak_caption(painter, theme, center, radius, size, peak_c, range, use_fahrenheit);
+            paint_peak_caption(
+                painter,
+                theme,
+                center,
+                radius,
+                size,
+                peak_c,
+                range,
+                use_fahrenheit,
+            );
         } else {
             painter.text(
                 Pos2::new(center.x, center.y - 4.0),
@@ -1284,7 +1306,16 @@ pub fn draw_arc_gauge(
                 peak_c,
                 range,
             );
-            paint_peak_caption(painter, theme, center, radius, size, peak_c, range, use_fahrenheit);
+            paint_peak_caption(
+                painter,
+                theme,
+                center,
+                radius,
+                size,
+                peak_c,
+                range,
+                use_fahrenheit,
+            );
         } else {
             painter.text(
                 Pos2::new(center.x, center.y - 4.0),
@@ -1452,8 +1483,14 @@ fn paint_peak_watermark_tick(
         crate::telemetry::guidelines::MetricLevel::Warm => theme.status_warm,
         crate::telemetry::guidelines::MetricLevel::Critical => theme.status_critical,
     };
-    let p_in = Pos2::new(center.x + pk_angle.cos() * r_in, center.y + pk_angle.sin() * r_in);
-    let p_out = Pos2::new(center.x + pk_angle.cos() * r_out, center.y + pk_angle.sin() * r_out);
+    let p_in = Pos2::new(
+        center.x + pk_angle.cos() * r_in,
+        center.y + pk_angle.sin() * r_in,
+    );
+    let p_out = Pos2::new(
+        center.x + pk_angle.cos() * r_out,
+        center.y + pk_angle.sin() * r_out,
+    );
     if theme.gauge_style == GaugeStyle::AeroGloss {
         painter.line_segment(
             [p_in, p_out],
@@ -1537,14 +1574,8 @@ fn paint_arc_strip(
 
     for i in 0..segments {
         let idx = (i * 2) as u32;
-        mesh.indices.extend_from_slice(&[
-            idx,
-            idx + 1,
-            idx + 2,
-            idx + 1,
-            idx + 3,
-            idx + 2,
-        ]);
+        mesh.indices
+            .extend_from_slice(&[idx, idx + 1, idx + 2, idx + 1, idx + 3, idx + 2]);
     }
     painter.add(Shape::mesh(mesh));
 }
@@ -1637,8 +1668,7 @@ pub fn draw_glow_bar(
 
         if frac > 0.01 {
             let fill_w = (rect.width() * frac).max(h);
-            let fill_rect =
-                Rect::from_min_size(rect.min, Vec2::new(fill_w.min(rect.width()), h));
+            let fill_rect = Rect::from_min_size(rect.min, Vec2::new(fill_w.min(rect.width()), h));
             let mid_col = lerp_color(start_color, end_color, frac);
             let cap_r = h * 0.5;
             let inner_left = fill_rect.left() + cap_r;
@@ -1673,7 +1703,10 @@ pub fn draw_glow_bar(
             // Delicate 2px white glass gleam along upper rim
             let gleam_rect = Rect::from_min_max(
                 Pos2::new(fill_rect.left() + 2.0, fill_rect.top() + 0.8),
-                Pos2::new(fill_rect.right() - 2.0, (fill_rect.top() + 2.8).min(fill_rect.center().y)),
+                Pos2::new(
+                    fill_rect.right() - 2.0,
+                    (fill_rect.top() + 2.8).min(fill_rect.center().y),
+                ),
             );
             if gleam_rect.width() > 2.0 {
                 painter.rect_filled(
@@ -1694,8 +1727,7 @@ pub fn draw_glow_bar(
 
         if frac > 0.01 {
             let fill_w = (rect.width() * frac).max(h);
-            let fill_rect =
-                Rect::from_min_size(rect.min, Vec2::new(fill_w.min(rect.width()), h));
+            let fill_rect = Rect::from_min_size(rect.min, Vec2::new(fill_w.min(rect.width()), h));
             let mid_col = lerp_color(start_color, end_color, frac);
 
             if theme.glow_intensity > 0.05 {
@@ -1784,7 +1816,8 @@ pub fn draw_segmented_throttle_bar(
 
     for i in 0..count {
         let x = rect.left() + i as f32 * (seg_w + gap);
-        let seg_rect = Rect::from_min_size(Pos2::new(x, rect.top() + 2.0), Vec2::new(seg_w, height));
+        let seg_rect =
+            Rect::from_min_size(Pos2::new(x, rect.top() + 2.0), Vec2::new(seg_w, height));
         let wave = ((time_sec * 5.0 - i as f64 * 0.25).sin() * 0.5 + 0.5) as f32;
         let col = lerp_color(theme.status_critical, theme.status_warm, wave * 0.45);
         if theme.glow_intensity > 0.05 {
@@ -1896,12 +1929,30 @@ pub fn draw_sparkline_chart(
 
     if let (Some(sec_pts), Some(sec_col)) = (secondary_points, secondary_color) {
         if sec_pts.len() >= 2 {
-            paint_series(painter, plot, sec_pts, min_y, hi, sec_col, false, theme.is_dark);
+            paint_series(
+                painter,
+                plot,
+                sec_pts,
+                min_y,
+                hi,
+                sec_col,
+                false,
+                theme.is_dark,
+            );
         }
     }
 
     if points.len() >= 2 {
-        paint_series(painter, plot, points, min_y, hi, accent_color, true, theme.is_dark);
+        paint_series(
+            painter,
+            plot,
+            points,
+            min_y,
+            hi,
+            accent_color,
+            true,
+            theme.is_dark,
+        );
     } else if let Some(&single) = points.back() {
         let y = map_y(single, min_y, hi, plot);
         painter.line_segment(
@@ -1983,14 +2034,8 @@ fn paint_series(
         }
         for i in 0..(screen_pts.len() - 1) {
             let idx = (i * 2) as u32;
-            mesh.indices.extend_from_slice(&[
-                idx,
-                idx + 1,
-                idx + 2,
-                idx + 1,
-                idx + 3,
-                idx + 2,
-            ]);
+            mesh.indices
+                .extend_from_slice(&[idx, idx + 1, idx + 2, idx + 1, idx + 3, idx + 2]);
         }
         painter.add(Shape::mesh(mesh));
     }
@@ -2070,9 +2115,11 @@ fn paint_aurora_ribbon(
     for i in 0..steps {
         let b = (i * 3) as u32;
         // Top half strip
-        mesh.indices.extend_from_slice(&[b, b + 1, b + 3, b + 1, b + 4, b + 3]);
+        mesh.indices
+            .extend_from_slice(&[b, b + 1, b + 3, b + 1, b + 4, b + 3]);
         // Bottom half strip
-        mesh.indices.extend_from_slice(&[b + 1, b + 2, b + 4, b + 2, b + 5, b + 4]);
+        mesh.indices
+            .extend_from_slice(&[b + 1, b + 2, b + 4, b + 2, b + 5, b + 4]);
     }
     painter.add(Shape::mesh(mesh));
 }
@@ -2101,7 +2148,10 @@ pub fn build_aero_glass_shapes(
     };
     let top_rect = Rect::from_min_max(
         Pos2::new(rect.left() + 1.0, rect.top() + 1.0),
-        Pos2::new(rect.right() - 1.0, (rect.top() + top_h).min(rect.bottom() - 1.0)),
+        Pos2::new(
+            rect.right() - 1.0,
+            (rect.top() + top_h).min(rect.bottom() - 1.0),
+        ),
     );
     shapes.push(Shape::rect_filled(
         top_rect,

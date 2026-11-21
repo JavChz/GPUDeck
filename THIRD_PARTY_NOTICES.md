@@ -1,6 +1,6 @@
 # Third-Party Notices & Attributions
 
-**AERO-GPU** source code is licensed under the **Mozilla Public License Version 2.0 (MPL-2.0)** — see [LICENSE](LICENSE).  
+**GPUDeck** source code is licensed under the **Mozilla Public License Version 2.0 (MPL-2.0)** — see [LICENSE](LICENSE).  
 All third-party libraries, font software, and referenced external code/interfaces listed below are compatible with MPL-2.0 and remain under their respective original licenses and copyrights.
 
 ---
@@ -59,5 +59,5 @@ The font files in `assets/fonts/` are licensed under the **SIL Open Font License
 
 ## 5. Runtime System Driver Interfaces (Not Redistributed)
 
-- **NVIDIA Management Library (NVML)** (`nvml.dll` on Windows, `libnvidia-ml.so.1` on Linux) and **NVIDIA NVAPI** (`nvapi64.dll` on Windows) are dynamically loaded at runtime from the user's installed NVIDIA graphics driver; no proprietary NVIDIA binaries or SDK files are bundled or redistributed with AERO-GPU.
+- **NVIDIA Management Library (NVML)** (`nvml.dll` on Windows, `libnvidia-ml.so.1` on Linux) and **NVIDIA NVAPI** (`nvapi64.dll` on Windows) are dynamically loaded at runtime from the user's installed NVIDIA graphics driver; no proprietary NVIDIA binaries or SDK files are bundled or redistributed with GPUDeck.
 - **Linux DRM / `hwmon` sysfs** (`/sys/class/drm/card*/device`) is read in read-only mode from the running Linux kernel.

@@ -346,7 +346,7 @@ impl TelemetryManager {
         let wake_clone = Arc::clone(&wakeup);
 
         let worker = thread::Builder::new()
-            .name("aero-gpu-telemetry".to_string())
+            .name("gpudeck-telemetry".to_string())
             .spawn(move || {
                 let mut live_backends = create_live_backends();
                 let mut persistent: HashMap<String, PersistentGpuStats> = crate::config::load_records()

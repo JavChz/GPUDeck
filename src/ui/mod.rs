@@ -19,7 +19,7 @@ use widgets::{draw_header_bar, paint_ambient_backdrop};
 use crate::config::AppConfig;
 use crate::telemetry::TelemetryManager;
 
-pub struct AeroGpuApp {
+pub struct GpuDeckApp {
     telemetry: TelemetryManager,
     config: AppConfig,
     theme: ThemeSpec,
@@ -31,7 +31,7 @@ pub struct AeroGpuApp {
     last_time: f64,
 }
 
-impl AeroGpuApp {
+impl GpuDeckApp {
     pub fn new(cc: &eframe::CreationContext<'_>, config: AppConfig) -> Self {
         setup_fonts(&cc.egui_ctx);
         let theme = ThemeSpec::for_id(config.theme);
@@ -341,7 +341,7 @@ impl AeroGpuApp {
                 ui.add_space(6.0);
                 ui.label(
                     egui::RichText::new(
-                        "AERO-GPU is read-only and never modifies GPU clocks, fan curves, or power limits.",
+                        "GPUDeck is read-only and never modifies GPU clocks, fan curves, or power limits.",
                     )
                     .font(self.theme.font_regular(11.0))
                     .color(self.theme.text_muted),
@@ -468,7 +468,7 @@ impl AeroGpuApp {
     }
 }
 
-impl eframe::App for AeroGpuApp {
+impl eframe::App for GpuDeckApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         let now = ctx.input(|i| i.time);
         let dt = if self.last_time == 0.0 {

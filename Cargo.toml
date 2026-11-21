@@ -1,13 +1,15 @@
 [package]
-name = "aero-gpu"
+name = "gpudeck"
 version = "0.1.0"
 edition = "2021"
 authors = ["Javier Garcia"]
 license = "MPL-2.0"
-description = "Cross-platform GPU thermal, power limit, and throttling monitor"
+description = "Cross-platform multi-GPU thermal, power limit, and throttling dashboard"
+repository = "https://github.com/JavChz/GPUDeck"
+homepage = "https://github.com/JavChz/GPUDeck"
 
 [[bin]]
-name = "aero-gpu"
+name = "gpudeck"
 path = "src/main.rs"
 
 [dependencies]

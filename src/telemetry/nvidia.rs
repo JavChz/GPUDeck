@@ -73,7 +73,9 @@ impl GpuBackend for NvidiaBackend {
                 .as_ref()
                 .map(|p| p.bus_id.clone())
                 .unwrap_or_else(|| format!("nvml-idx-{idx}"));
+            #[cfg(target_os = "windows")]
             let bus = pci.as_ref().map(|p| p.bus).unwrap_or(0);
+            #[cfg(target_os = "windows")]
             let device_slot = pci.as_ref().map(|p| p.device).unwrap_or(0);
             let architecture = device.architecture().ok().map(|a| format!("{a:?}"));
 

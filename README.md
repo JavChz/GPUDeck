@@ -1,10 +1,10 @@
-# AERO-GPU
+# GPUDeck
 
 > **Warning**: This is a vibe coded app, may have important bugs, don't use it for any mission critical purpose. Use at your own risk.
 
 > The healthy indicators for temps are somewhat arbitrary, based on rule of thumb, they should be used as a rough guide only. Check your GPU manufacturer's website for more accurate information. Some models may report different temperatures for the same conditions.
 
-A cross-platform (Windows & Linux) GPU thermal, power limit, and throttling monitor built in Rust with `eframe`/`egui`.
+A cross-platform (Windows & Linux) multi-GPU thermal, power limit, and throttling dashboard built in Rust with `eframe`/`egui`.
 
 ## Features
 
@@ -54,9 +54,22 @@ cargo run -- --interval 500
   - NVIDIA proprietary driver (`libnvidia-ml.so.1`) for NVIDIA GPUs, or kernel `amdgpu`/`i915`/`xe` `hwmon` sysfs for AMD/Intel GPUs.
   - Standard desktop OpenGL / windowing development libraries required by `eframe`/`glutin` (e.g., on Debian/Ubuntu: `libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libxkbcommon-dev libssl-dev libgl1-mesa-dev`).
 
+## Creating a Release
+
+Releases are automated via GitHub Actions ([`.github/workflows/release.yml`](.github/workflows/release.yml)) using SemVer tags (`vX.Y.Z`):
+
+1. Update `version` in `Cargo.toml` (for example `0.1.0`), run `cargo test` so `Cargo.lock` updates to match, and commit your changes.
+2. Create and push a matching version tag:
+   ```bash
+   git tag v0.1.0
+   git push origin main --tags
+   ```
+   Pre-release tags containing a hyphen suffix (e.g., `v0.2.0-beta.1`) automatically publish as GitHub Pre-releases.
+3. The Release workflow verifies that the git tag matches `Cargo.toml`, builds Windows (`x86_64-pc-windows-msvc` `.zip`) and Linux (`x86_64-unknown-linux-gnu` `.tar.gz`) archives plus `SHA256SUMS.txt`, and creates the GitHub Release with generated release notes.
+
 ## Disclaimer & Limitation of Liability
 
-AERO-GPU is provided **"AS IS"**, without warranty of any kind, express or implied (including, without limitation, warranties of merchantability, fitness for a particular purpose, accuracy, or non-infringement), strictly for **informational hardware monitoring only**.
+GPUDeck is provided **"AS IS"**, without warranty of any kind, express or implied (including, without limitation, warranties of merchantability, fitness for a particular purpose, accuracy, or non-infringement), strictly for **informational hardware monitoring only**.
 
 - GPU telemetry values are obtained from third-party graphics drivers, operating system interfaces, and undocumented vendor APIs (such as Windows `nvapi64.dll`), and may be delayed, unavailable, incomplete, or inaccurate depending on GPU model, driver version, or sensor hardware.
 - Displayed "Healthy", "Warm", and "Critical" temperature thresholds are general rule-of-thumb guidelines and **not** official manufacturer safety specifications or hardware protection guarantees.

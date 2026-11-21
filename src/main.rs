@@ -485,7 +485,7 @@ mod tests {
             ThemeId::from_str_loose("enterprise"),
             Some(ThemeId::Corporate)
         );
-        assert!(ThemeSpec::for_id(ThemeId::Terminal).force_monospace);
+        assert_eq!(ThemeSpec::for_id(ThemeId::Terminal).card_radius, 0);
         assert!(!ThemeSpec::for_id(ThemeId::FrutigerAero).is_dark);
         assert!(ThemeSpec::for_id(ThemeId::WinLike).is_dark);
     }

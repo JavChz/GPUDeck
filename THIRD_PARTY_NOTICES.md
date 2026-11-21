@@ -35,10 +35,10 @@ All remaining transitive Rust dependencies resolved in `Cargo.lock` are licensed
 
 The font files in `assets/fonts/` are licensed under the **SIL Open Font License, Version 1.1** — see [assets/fonts/OFL.txt](assets/fonts/OFL.txt):
 
-- **Barlow** (`Barlow-Medium.ttf`, `Barlow-SemiBold.ttf`, `Barlow-Bold.ttf`)  
+- **Barlow** (`Barlow-SemiBold.ttf`, `Barlow-Bold.ttf`)  
   Copyright 2017 The Barlow Project Authors (<https://github.com/jpt/barlow>)
-- **JetBrains Mono** (`JetBrainsMono-Regular.ttf`, `JetBrainsMono-Bold.ttf`)  
-  Copyright 2020 The JetBrains Mono Project Authors (<https://github.com/JetBrains/JetBrainsMono>)
+- **Inter** (`Inter-Regular.ttf`, `Inter-Medium.ttf`, `Inter-SemiBold.ttf`)  
+  Copyright 2020 The Inter Project Authors (<https://github.com/rsms/inter>)
 
 ---
 

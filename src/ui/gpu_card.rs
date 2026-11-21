@@ -157,7 +157,7 @@ pub fn draw_gpu_card(
                                 }
                                 ui.label(
                                     egui::RichText::new(format!("GPU {}: {}", gpu.index, gpu.name))
-                                        .font(theme.font_bold(15.5))
+                                        .font(theme.font_title(15.5))
                                         .color(title_col),
                                 );
                             });
@@ -171,7 +171,7 @@ pub fn draw_gpu_card(
                             }
                             ui.label(
                                 egui::RichText::new(meta_parts.join("  •  "))
-                                    .font(theme.font_mono(10.5))
+                                    .font(theme.font_body(10.5))
                                     .color(theme.text_muted),
                             );
                         });
@@ -294,7 +294,7 @@ pub fn draw_gpu_card(
                                     );
                                     let d_galley = ui.painter().layout_no_wrap(
                                         delta_txt.clone(),
-                                        theme.font_mono_bold(10.0),
+                                        theme.font_value(10.0),
                                         d_col,
                                     );
                                     let d_w = (d_galley.size().x + 14.0).max(66.0);
@@ -316,7 +316,7 @@ pub fn draw_gpu_card(
                                         d_rect.center(),
                                         Align2::CENTER_CENTER,
                                         delta_txt,
-                                        theme.font_mono_bold(10.0),
+                                        theme.font_value(10.0),
                                         d_col,
                                     );
                                     d_resp.on_hover_text(
@@ -330,7 +330,7 @@ pub fn draw_gpu_card(
                                 );
                                 let s_galley = ui.painter().layout_no_wrap(
                                     spec_txt.clone(),
-                                    theme.font_mono(10.0),
+                                    theme.font_ui(10.0),
                                     theme.text_secondary,
                                 );
                                 let s_w = (s_galley.size().x + 14.0).max(68.0);
@@ -384,14 +384,14 @@ pub fn draw_gpu_card(
                                     s_rect.center(),
                                     Align2::CENTER_CENTER,
                                     spec_txt,
-                                    theme.font_mono(10.0),
+                                    theme.font_ui(10.0),
                                     s_text_col,
                                 );
                                 s_resp.on_hover_ui(|ui| {
                                     ui.set_min_width(225.0);
                                     ui.label(
-                                        egui::RichText::new("Thermal Thresholds")
-                                            .font(theme.font_bold(12.5))
+                                        egui::RichText::new("THERMAL THRESHOLDS")
+                                            .font(theme.font_title(12.5))
                                             .color(theme.accent_primary),
                                     );
                                     ui.add_space(4.0);
@@ -457,12 +457,12 @@ pub fn draw_gpu_card(
                                                 "Driver Limits: {}",
                                                 hw_lines.join("  •  ")
                                             ))
-                                            .font(theme.font_regular(10.5))
+                                            .font(theme.font_body(10.5))
                                             .color(theme.text_secondary),
                                         );
                                         ui.label(
                                             egui::RichText::new("Source: Live GPU driver limits")
-                                                .font(theme.font_regular(10.0))
+                                                .font(theme.font_body(10.0))
                                                 .color(theme.text_muted),
                                         );
                                     } else {
@@ -471,7 +471,7 @@ pub fn draw_gpu_card(
                                             egui::RichText::new(
                                                 "Source: Architecture reference defaults",
                                             )
-                                            .font(theme.font_regular(10.0))
+                                            .font(theme.font_body(10.0))
                                             .color(theme.text_muted),
                                         );
                                     }
@@ -550,7 +550,7 @@ pub fn draw_gpu_card(
                                             Pos2::new(r_rect.left() + 20.0, r_rect.center().y),
                                             Align2::LEFT_CENTER,
                                             "Reset",
-                                            theme.font_semibold(10.0),
+                                            theme.font_ui(10.0),
                                             if theme.gloss_sheen {
                                                 r_col
                                             } else if r_resp.hovered() {
@@ -669,7 +669,7 @@ pub fn draw_gpu_card(
                                     };
                                     ui.label(
                                         egui::RichText::new(default_str)
-                                            .font(theme.font_regular(11.5))
+                                            .font(theme.font_body(11.5))
                                             .color(theme.text_secondary),
                                     );
 
@@ -692,16 +692,16 @@ pub fn draw_gpu_card(
                                     };
                                     ui.label(
                                         egui::RichText::new(clk_line)
-                                            .font(theme.font_mono(10.5))
+                                            .font(theme.font_body(10.5))
                                             .color(theme.text_muted),
                                     )
                                     .on_hover_ui(|ui| {
                                         ui.label(
                                             egui::RichText::new(format!(
-                                                "{} Telemetry Details",
-                                                gpu.vendor.label()
+                                                "{} TELEMETRY DETAILS",
+                                                gpu.vendor.label().to_ascii_uppercase()
                                             ))
-                                            .font(theme.font_bold(12.0))
+                                            .font(theme.font_title(12.0))
                                             .color(theme.accent_primary),
                                         );
                                         if let Some(m) = gpu.clocks.max_graphics_mhz {
@@ -830,13 +830,13 @@ pub fn draw_gpu_card(
                                             (true, true) => "HW + SW",
                                             (true, false) => "HW",
                                             (false, true) => "SW",
-                                            _ => "ACTIVE",
+                                            (false, false) => "Active",
                                         };
-                                        format!("Thermal Throttling: YES - {kind}")
+                                        format!("Thermal Throttling: Active ({kind})")
                                     } else if gpu.throttle.ever_thermal_throttled {
-                                        "Thermal Throttling: NO (Peak tripped earlier)".to_string()
+                                        "Thermal Throttling: No (Peak tripped earlier)".to_string()
                                     } else {
-                                        "Thermal Throttling: NO".to_string()
+                                        "Thermal Throttling: No".to_string()
                                     };
 
                                     draw_icon_text_row(ui, theme, thr_col, &thr_text, |p, c, col| {
@@ -945,7 +945,7 @@ pub fn draw_gpu_card(
                             ui,
                             theme,
                             chart_size,
-                            "Core / Hotspot",
+                            "CORE / HOTSPOT",
                             &temp_readout,
                             &core_disp_pts,
                             t_min,
@@ -983,7 +983,7 @@ pub fn draw_gpu_card(
                             ui,
                             theme,
                             chart_size,
-                            "Memory Temp",
+                            "MEMORY TEMP",
                             &mem_readout,
                             &mem_disp_pts,
                             m_min,
@@ -1006,7 +1006,7 @@ pub fn draw_gpu_card(
                             ui,
                             theme,
                             chart_size,
-                            "Fans",
+                            "FANS",
                             &fan_readout,
                             &gpu.history.fan_pct,
                             0.0,
@@ -1048,7 +1048,7 @@ pub fn draw_gpu_card(
                             ui,
                             theme,
                             chart_size,
-                            "GPU Usage",
+                            "GPU USAGE",
                             &util_readout,
                             &gpu.history.gpu_util_pct,
                             0.0,
@@ -1075,7 +1075,7 @@ pub fn draw_gpu_card(
                             ui,
                             theme,
                             chart_size,
-                            "VRAM Usage",
+                            "VRAM USAGE",
                             &vram_readout,
                             &gpu.history.vram_used_gb,
                             0.0,
@@ -1116,7 +1116,7 @@ pub fn draw_gpu_card(
                             ui,
                             theme,
                             chart_size,
-                            "Power Draw",
+                            "POWER DRAW",
                             &power_readout,
                             &gpu.history.power_w,
                             0.0,
@@ -1189,7 +1189,7 @@ where
         Pos2::new(rect.left() + 18.0, rect.center().y),
         Align2::LEFT_CENTER,
         text,
-        theme.font_semibold(12.0),
+        theme.font_value(12.0),
         if accent == theme.text_muted {
             theme.text_secondary
         } else {
@@ -1202,7 +1202,11 @@ where
 fn draw_chart_group_label(ui: &mut Ui, theme: &ThemeSpec, width: f32, label: &str) {
     let (rect, _) = ui.allocate_exact_size(Vec2::new(width, 13.0), Sense::hover());
     let painter = ui.painter();
-    let galley = painter.layout_no_wrap(label.to_string(), theme.font_semibold(9.5), theme.text_muted);
+    let galley = painter.layout_no_wrap(
+        label.to_string(),
+        theme.font_title_semi(10.0),
+        theme.text_muted,
+    );
     let label_w = galley.size().x;
     let label_h = galley.size().y;
     painter.galley(

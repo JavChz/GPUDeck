@@ -175,7 +175,6 @@ pub struct ThemeSpec {
     pub glow_intensity: f32,
     pub gloss_sheen: bool,
     pub card_shadow: bool,
-    pub force_monospace: bool,
 
     pub backdrop_style: BackdropStyle,
     pub header_style: HeaderStyle,
@@ -236,7 +235,6 @@ impl ThemeSpec {
                 glow_intensity: 1.0,
                 gloss_sheen: false,
                 card_shadow: false,
-                force_monospace: false,
                 backdrop_style: BackdropStyle::NeoCyber,
                 header_style: HeaderStyle::CyberTrapezoid,
                 gauge_style: GaugeStyle::NeonBloom,
@@ -293,7 +291,6 @@ impl ThemeSpec {
                 glow_intensity: 0.25,
                 gloss_sheen: true,
                 card_shadow: true,
-                force_monospace: false,
                 backdrop_style: BackdropStyle::AeroSky,
                 header_style: HeaderStyle::AeroGlassBar,
                 gauge_style: GaugeStyle::AeroGloss,
@@ -350,7 +347,6 @@ impl ThemeSpec {
                 glow_intensity: 0.35,
                 gloss_sheen: false,
                 card_shadow: true,
-                force_monospace: false,
                 backdrop_style: BackdropStyle::KawaiiPastel,
                 header_style: HeaderStyle::KawaiiRibbon,
                 gauge_style: GaugeStyle::CuteBubble,
@@ -407,7 +403,6 @@ impl ThemeSpec {
                 glow_intensity: 0.0,
                 gloss_sheen: false,
                 card_shadow: false,
-                force_monospace: false,
                 backdrop_style: BackdropStyle::JapandiPaper,
                 header_style: HeaderStyle::CleanModern,
                 gauge_style: GaugeStyle::CrispFlat,
@@ -464,7 +459,6 @@ impl ThemeSpec {
                 glow_intensity: 0.0,
                 gloss_sheen: false,
                 card_shadow: true,
-                force_monospace: false,
                 backdrop_style: BackdropStyle::CleanFlat,
                 header_style: HeaderStyle::CleanModern,
                 gauge_style: GaugeStyle::CrispFlat,
@@ -521,7 +515,6 @@ impl ThemeSpec {
                 glow_intensity: 0.32,
                 gloss_sheen: false,
                 card_shadow: false,
-                force_monospace: false,
                 backdrop_style: BackdropStyle::ModernAmbient,
                 header_style: HeaderStyle::CleanModern,
                 gauge_style: GaugeStyle::NeonBloom,
@@ -578,7 +571,6 @@ impl ThemeSpec {
                 glow_intensity: 0.0,
                 gloss_sheen: false,
                 card_shadow: false,
-                force_monospace: false,
                 backdrop_style: BackdropStyle::CleanFlat,
                 header_style: HeaderStyle::CleanModern,
                 gauge_style: GaugeStyle::CrispFlat,
@@ -635,7 +627,6 @@ impl ThemeSpec {
                 glow_intensity: 0.25,
                 gloss_sheen: false,
                 card_shadow: false,
-                force_monospace: true,
                 backdrop_style: BackdropStyle::TerminalCrt,
                 header_style: HeaderStyle::TerminalBar,
                 gauge_style: GaugeStyle::TerminalBlock,
@@ -692,7 +683,6 @@ impl ThemeSpec {
                 glow_intensity: 0.0,
                 gloss_sheen: false,
                 card_shadow: true,
-                force_monospace: false,
                 backdrop_style: BackdropStyle::CleanFlat,
                 header_style: HeaderStyle::ExecutiveBar,
                 gauge_style: GaugeStyle::CrispFlat,
@@ -701,36 +691,24 @@ impl ThemeSpec {
         }
     }
 
-    pub fn font_regular(&self, size: f32) -> FontId {
-        if self.force_monospace {
-            font_mono(size)
-        } else {
-            font_regular(size)
-        }
+    pub fn font_title(&self, size: f32) -> FontId {
+        font_title(size)
     }
 
-    pub fn font_semibold(&self, size: f32) -> FontId {
-        if self.force_monospace {
-            font_mono_bold(size)
-        } else {
-            font_semibold(size)
-        }
+    pub fn font_title_semi(&self, size: f32) -> FontId {
+        font_title_semi(size)
     }
 
-    pub fn font_bold(&self, size: f32) -> FontId {
-        if self.force_monospace {
-            font_mono_bold(size)
-        } else {
-            font_bold(size)
-        }
+    pub fn font_body(&self, size: f32) -> FontId {
+        font_body(size)
     }
 
-    pub fn font_mono(&self, size: f32) -> FontId {
-        font_mono(size)
+    pub fn font_ui(&self, size: f32) -> FontId {
+        font_ui(size)
     }
 
-    pub fn font_mono_bold(&self, size: f32) -> FontId {
-        font_mono_bold(size)
+    pub fn font_value(&self, size: f32) -> FontId {
+        font_value(size)
     }
 
     pub fn temp_colors(&self, level: MetricLevel) -> (Color32, Color32) {
@@ -762,10 +740,6 @@ pub fn setup_fonts(ctx: &egui::Context) {
     let mut fonts = FontDefinitions::default();
 
     fonts.font_data.insert(
-        "barlow_medium".to_owned(),
-        FontData::from_static(include_bytes!("../../assets/fonts/Barlow-Medium.ttf")).into(),
-    );
-    fonts.font_data.insert(
         "barlow_semibold".to_owned(),
         FontData::from_static(include_bytes!("../../assets/fonts/Barlow-SemiBold.ttf")).into(),
     );
@@ -774,33 +748,52 @@ pub fn setup_fonts(ctx: &egui::Context) {
         FontData::from_static(include_bytes!("../../assets/fonts/Barlow-Bold.ttf")).into(),
     );
     fonts.font_data.insert(
-        "jb_mono".to_owned(),
-        FontData::from_static(include_bytes!("../../assets/fonts/JetBrainsMono-Regular.ttf"))
-            .into(),
+        "inter_regular".to_owned(),
+        FontData::from_static(include_bytes!("../../assets/fonts/Inter-Regular.ttf")).into(),
     );
     fonts.font_data.insert(
-        "jb_mono_bold".to_owned(),
-        FontData::from_static(include_bytes!("../../assets/fonts/JetBrainsMono-Bold.ttf")).into(),
+        "inter_medium".to_owned(),
+        FontData::from_static(include_bytes!("../../assets/fonts/Inter-Medium.ttf")).into(),
+    );
+    fonts.font_data.insert(
+        "inter_semibold".to_owned(),
+        FontData::from_static(include_bytes!("../../assets/fonts/Inter-SemiBold.ttf")).into(),
     );
 
     if let Some(prop) = fonts.families.get_mut(&FontFamily::Proportional) {
-        prop.insert(0, "barlow_medium".to_owned());
+        prop.insert(0, "inter_regular".to_owned());
     }
     if let Some(mono) = fonts.families.get_mut(&FontFamily::Monospace) {
-        mono.insert(0, "jb_mono".to_owned());
+        mono.insert(0, "inter_regular".to_owned());
     }
 
     fonts.families.insert(
-        FontFamily::Name("semibold".into()),
-        vec!["barlow_semibold".to_owned(), "barlow_medium".to_owned()],
+        FontFamily::Name("ui_medium".into()),
+        vec!["inter_medium".to_owned(), "inter_regular".to_owned()],
     );
     fonts.families.insert(
-        FontFamily::Name("bold".into()),
-        vec!["barlow_bold".to_owned(), "barlow_semibold".to_owned()],
+        FontFamily::Name("ui_semibold".into()),
+        vec![
+            "inter_semibold".to_owned(),
+            "inter_medium".to_owned(),
+            "inter_regular".to_owned(),
+        ],
     );
     fonts.families.insert(
-        FontFamily::Name("mono_bold".into()),
-        vec!["jb_mono_bold".to_owned(), "jb_mono".to_owned()],
+        FontFamily::Name("title_semi".into()),
+        vec![
+            "barlow_semibold".to_owned(),
+            "barlow_bold".to_owned(),
+            "inter_regular".to_owned(),
+        ],
+    );
+    fonts.families.insert(
+        FontFamily::Name("title".into()),
+        vec![
+            "barlow_bold".to_owned(),
+            "barlow_semibold".to_owned(),
+            "inter_regular".to_owned(),
+        ],
     );
 
     ctx.set_fonts(fonts);
@@ -849,24 +842,24 @@ pub fn apply_theme_visuals(ctx: &egui::Context, theme: &ThemeSpec) {
     });
 }
 
-pub fn font_regular(size: f32) -> FontId {
+pub fn font_title(size: f32) -> FontId {
+    FontId::new(size, FontFamily::Name("title".into()))
+}
+
+pub fn font_title_semi(size: f32) -> FontId {
+    FontId::new(size, FontFamily::Name("title_semi".into()))
+}
+
+pub fn font_body(size: f32) -> FontId {
     FontId::new(size, FontFamily::Proportional)
 }
 
-pub fn font_semibold(size: f32) -> FontId {
-    FontId::new(size, FontFamily::Name("semibold".into()))
+pub fn font_ui(size: f32) -> FontId {
+    FontId::new(size, FontFamily::Name("ui_medium".into()))
 }
 
-pub fn font_bold(size: f32) -> FontId {
-    FontId::new(size, FontFamily::Name("bold".into()))
-}
-
-pub fn font_mono(size: f32) -> FontId {
-    FontId::new(size, FontFamily::Monospace)
-}
-
-pub fn font_mono_bold(size: f32) -> FontId {
-    FontId::new(size, FontFamily::Name("mono_bold".into()))
+pub fn font_value(size: f32) -> FontId {
+    FontId::new(size, FontFamily::Name("ui_semibold".into()))
 }
 
 pub fn with_alpha(c: Color32, alpha: u8) -> Color32 {

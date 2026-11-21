@@ -410,8 +410,8 @@ pub fn draw_header_bar(
             painter.text(
                 rect.center(),
                 Align2::CENTER_CENTER,
-                "[ GPUDECK :: LIVE TELEMETRY ]",
-                theme.font_mono_bold(15.0),
+                "[ GPUDECK :: TELEMETRY ]",
+                theme.font_title(15.5),
                 theme.header_text_primary,
             );
         }
@@ -441,54 +441,31 @@ pub fn draw_header_bar(
         }
     }
 
-    // Left status pills
-    let left_x = rect.left() + 14.0;
+    // Left status summary
     let cy = rect.center().y;
-    let live_col = theme.status_healthy;
-
-    let pill_rect = Rect::from_center_size(Pos2::new(left_x + 30.0, cy), Vec2::new(60.0, 24.0));
-    let pill_cr = CornerRadius::same(theme.badge_radius.min(12));
-    painter.rect_filled(pill_rect, pill_cr, with_alpha(live_col, 32));
-    painter.rect_stroke(
-        pill_rect,
-        pill_cr,
-        Stroke::new(1.0_f32, with_alpha(live_col, 150)),
-        StrokeKind::Inside,
-    );
-    painter.circle_filled(Pos2::new(pill_rect.left() + 12.0, cy), 4.0, live_col);
-    painter.text(
-        Pos2::new(pill_rect.left() + 21.0, cy),
-        Align2::LEFT_CENTER,
-        "LIVE",
-        theme.font_bold(11.5),
-        theme.header_text_primary,
-    );
-
-    if avail_w > 660.0 {
-        let gpu_label = if gpu_count == 1 {
-            "1 GPU".to_string()
-        } else {
-            format!("{gpu_count} GPUs")
-        };
+    let gpu_label = if gpu_count == 1 {
+        "1 GPU".to_string()
+    } else {
+        format!("{gpu_count} GPUs")
+    };
+    let left_status = if avail_w > 780.0 {
+        match driver_version {
+            Some(drv) => Some(format!("{gpu_label}  ·  Driver {drv}")),
+            None => Some(gpu_label),
+        }
+    } else if avail_w > 560.0 {
+        Some(gpu_label)
+    } else {
+        None
+    };
+    if let Some(status) = left_status {
         painter.text(
-            Pos2::new(pill_rect.right() + 12.0, cy),
+            Pos2::new(rect.left() + 16.0, cy),
             Align2::LEFT_CENTER,
-            gpu_label,
-            theme.font_semibold(13.0),
+            status,
+            theme.font_ui(12.5),
             theme.header_text_secondary,
         );
-
-        if avail_w > 930.0 {
-            if let Some(drv) = driver_version {
-                painter.text(
-                    Pos2::new(pill_rect.right() + 68.0, cy),
-                    Align2::LEFT_CENTER,
-                    format!("Driver {drv}"),
-                    theme.font_mono(11.5),
-                    theme.header_text_secondary,
-                );
-            }
-        }
     }
 
     // Right interactive controls
@@ -534,7 +511,7 @@ pub fn draw_header_bar(
         let name = theme.id.display_name();
         let name_galley = ui.painter().layout_no_wrap(
             name.to_string(),
-            theme.font_semibold(12.0),
+            theme.font_ui(12.0),
             theme.header_text_primary,
         );
         let btn_w = (name_galley.size().x + 38.0).clamp(92.0, 146.0);
@@ -584,7 +561,7 @@ pub fn draw_header_bar(
 fn paint_brand_title(painter: &Painter, center: Pos2, theme: &ThemeSpec) {
     let brand_galley = painter.layout_no_wrap(
         "GPUDECK".to_string(),
-        theme.font_bold(17.5),
+        theme.font_title(17.5),
         theme.header_text_primary,
     );
     let pos = Pos2::new(
@@ -597,7 +574,7 @@ fn paint_brand_title(painter: &Painter, center: Pos2, theme: &ThemeSpec) {
 fn paint_aero_brand_title(painter: &Painter, center: Pos2, theme: &ThemeSpec) {
     let brand_galley = painter.layout_no_wrap(
         "GPUDECK".to_string(),
-        theme.font_bold(17.5),
+        theme.font_title(17.5),
         Color32::WHITE,
     );
     let shadow_col = Color32::from_rgba_unmultiplied(4, 24, 52, 130);
@@ -607,7 +584,7 @@ fn paint_aero_brand_title(painter: &Painter, center: Pos2, theme: &ThemeSpec) {
     );
     painter.galley(
         Pos2::new(pos.x, pos.y + 1.0),
-        painter.layout_no_wrap("GPUDECK".to_string(), theme.font_bold(17.5), shadow_col),
+        painter.layout_no_wrap("GPUDECK".to_string(), theme.font_title(17.5), shadow_col),
         shadow_col,
     );
     painter.galley(pos, brand_galley, Color32::WHITE);
@@ -682,7 +659,7 @@ fn paint_theme_pill_button(ui: &mut Ui, theme: &ThemeSpec, rect: Rect, open: boo
         Pos2::new(rect.left() + 22.0, rect.center().y),
         Align2::LEFT_CENTER,
         theme.id.display_name(),
-        theme.font_semibold(11.5),
+        theme.font_ui(12.0),
         text_col,
     );
 
@@ -805,7 +782,7 @@ fn paint_text_button(
         rect.center(),
         Align2::CENTER_CENTER,
         text,
-        theme.font_semibold(12.0),
+        theme.font_value(12.0),
         text_col,
     );
     resp
@@ -864,7 +841,7 @@ where
         Pos2::new(rect.left() + 23.0, rect.center().y),
         Align2::LEFT_CENTER,
         text,
-        theme.font_semibold(11.5),
+        theme.font_ui(11.5),
         text_col,
     );
     resp
@@ -926,12 +903,12 @@ pub fn draw_status_badge(
 
     let sub_galley = ui.painter().layout_no_wrap(
         subtitle.to_string(),
-        theme.font_regular(10.5),
+        theme.font_body(10.5),
         with_alpha(text_col, 230),
     );
     let title_galley =
         ui.painter()
-            .layout_no_wrap(badge.label().to_string(), theme.font_bold(12.5), text_col);
+            .layout_no_wrap(badge.label().to_string(), theme.font_title(12.5), text_col);
 
     let w = (sub_galley.size().x.max(title_galley.size().x) + 22.0).clamp(116.0, 238.0);
     let h = 40.0;
@@ -980,7 +957,7 @@ pub fn draw_status_badge(
             ),
             Align2::CENTER_CENTER,
             badge.label(),
-            theme.font_bold(12.5),
+            theme.font_title(12.5),
             shadow_col,
         );
         painter.text(
@@ -990,7 +967,7 @@ pub fn draw_status_badge(
             ),
             Align2::CENTER_CENTER,
             subtitle,
-            theme.font_regular(10.5),
+            theme.font_body(10.5),
             shadow_col,
         );
     } else {
@@ -1113,7 +1090,7 @@ pub fn draw_arc_gauge(
                 Pos2::new(center.x, center.y + y_shift),
                 Align2::CENTER_CENTER,
                 val_str,
-                theme.font_mono_bold((size * 0.21).clamp(17.0, 27.0)),
+                theme.font_title((size * 0.21).clamp(17.0, 27.0)),
                 theme.text_primary,
             );
             paint_peak_caption(
@@ -1131,14 +1108,14 @@ pub fn draw_arc_gauge(
                 Pos2::new(center.x, center.y - 4.0),
                 Align2::CENTER_CENTER,
                 "N/A",
-                theme.font_mono_bold((size * 0.18).clamp(15.0, 22.0)),
+                theme.font_title((size * 0.18).clamp(15.0, 22.0)),
                 theme.text_muted,
             );
             painter.text(
                 Pos2::new(center.x, center.y + 14.0),
                 Align2::CENTER_CENTER,
-                "NO SENSOR",
-                theme.font_mono(9.5),
+                "No sensor",
+                theme.font_ui(9.5),
                 theme.text_muted,
             );
         }
@@ -1277,7 +1254,7 @@ pub fn draw_arc_gauge(
                     Pos2::new(center.x, center.y + y_shift + 1.0),
                     Align2::CENTER_CENTER,
                     &val_str,
-                    theme.font_mono_bold(val_font_size),
+                    theme.font_title(val_font_size),
                     Color32::from_rgba_unmultiplied(0, 0, 0, 120),
                 );
             } else if theme.gauge_style == GaugeStyle::AeroGloss {
@@ -1285,7 +1262,7 @@ pub fn draw_arc_gauge(
                     Pos2::new(center.x, center.y + y_shift + 1.0),
                     Align2::CENTER_CENTER,
                     &val_str,
-                    theme.font_mono_bold(val_font_size),
+                    theme.font_title(val_font_size),
                     with_alpha(Color32::WHITE, 210),
                 );
             }
@@ -1293,7 +1270,7 @@ pub fn draw_arc_gauge(
                 Pos2::new(center.x, center.y + y_shift),
                 Align2::CENTER_CENTER,
                 val_str,
-                theme.font_mono_bold(val_font_size),
+                theme.font_title(val_font_size),
                 theme.text_primary,
             );
 
@@ -1325,14 +1302,14 @@ pub fn draw_arc_gauge(
                 Pos2::new(center.x, center.y - 4.0),
                 Align2::CENTER_CENTER,
                 "N/A",
-                theme.font_mono_bold((size * 0.19).clamp(16.0, 24.0)),
+                theme.font_title((size * 0.19).clamp(16.0, 24.0)),
                 theme.text_muted,
             );
             painter.text(
                 Pos2::new(center.x, center.y + 14.0),
                 Align2::CENTER_CENTER,
-                "NO SENSOR",
-                theme.font_bold(9.5),
+                "No sensor",
+                theme.font_ui(9.5),
                 with_alpha(theme.text_muted, 200),
             );
         }
@@ -1342,7 +1319,7 @@ pub fn draw_arc_gauge(
         Pos2::new(rect.center().x, rect.bottom() - 22.0),
         Align2::CENTER_CENTER,
         label,
-        theme.font_semibold(11.5),
+        theme.font_title_semi(11.5),
         theme.text_secondary,
     );
 
@@ -1365,10 +1342,10 @@ pub fn draw_arc_gauge(
     };
 
     let prefix_galley =
-        painter.layout_no_wrap("Safe ".to_string(), theme.font_regular(10.0), prefix_col);
+        painter.layout_no_wrap("Safe ".to_string(), theme.font_body(10.0), prefix_col);
     let val_galley = painter.layout_no_wrap(
         format!("<{}", format_temp(range.healthy_max, use_fahrenheit)),
-        theme.font_mono_bold(10.0),
+        theme.font_value(10.0),
         val_col,
     );
     let prefix_w = prefix_galley.size().x;
@@ -1408,8 +1385,8 @@ pub fn draw_arc_gauge(
     resp.on_hover_ui(|ui| {
         ui.set_min_width(210.0);
         ui.label(
-            egui::RichText::new(label)
-                .font(theme.font_bold(13.0))
+            egui::RichText::new(label.to_ascii_uppercase())
+                .font(theme.font_title(12.5))
                 .color(theme.accent_primary),
         );
         ui.add_space(4.0);
@@ -1532,8 +1509,8 @@ fn paint_peak_caption(
     painter.text(
         Pos2::new(center.x, center.y + radius * 0.50),
         Align2::CENTER_CENTER,
-        format!("MAX {}", format_temp(pk, use_fahrenheit)),
-        theme.font_mono_bold(font_sz),
+        format!("Max {}", format_temp(pk, use_fahrenheit)),
+        theme.font_ui(font_sz),
         pk_col,
     );
 }
@@ -1936,14 +1913,14 @@ pub fn draw_sparkline_chart(
         Pos2::new(rect.left() + 8.0, rect.top() + 10.0),
         Align2::LEFT_CENTER,
         title,
-        theme.font_semibold(10.5),
+        theme.font_title_semi(10.5),
         theme.text_secondary,
     );
     painter.text(
         Pos2::new(rect.right() - 8.0, rect.top() + 10.0),
         Align2::RIGHT_CENTER,
         readout,
-        theme.font_mono_bold(10.5),
+        theme.font_value(10.5),
         accent_color,
     );
 
@@ -1984,7 +1961,7 @@ pub fn draw_sparkline_chart(
             Pos2::new(plot.left() - 4.0, y),
             Align2::RIGHT_CENTER,
             label,
-            theme.font_mono(8.5),
+            theme.font_body(8.5),
             theme.text_muted,
         );
     }
@@ -2026,7 +2003,7 @@ pub fn draw_sparkline_chart(
             plot.center(),
             Align2::CENTER_CENTER,
             "—",
-            theme.font_mono(11.0),
+            theme.font_body(11.0),
             theme.text_muted,
         );
     }
@@ -2037,8 +2014,8 @@ pub fn draw_sparkline_chart(
             let min_v = points.iter().copied().fold(f32::INFINITY, f32::min);
             let max_v = points.iter().copied().fold(f32::NEG_INFINITY, f32::max);
             ui.label(
-                egui::RichText::new(title)
-                    .font(theme.font_bold(12.0))
+                egui::RichText::new(title.to_ascii_uppercase())
+                    .font(theme.font_title(11.5))
                     .color(accent_color),
             );
             ui.label(format!("Current: {:.1}{unit}", cur));

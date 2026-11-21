@@ -84,5 +84,5 @@ GPUDeck is provided **"AS IS"**, without warranty of any kind, express or implie
 Copyright (c) 2026 Javier Garcia
 
 - **Application Source Code:** Licensed under the **Mozilla Public License Version 2.0 (MPL-2.0)** — see [LICENSE](LICENSE).
-- **Bundled Font Software (`assets/fonts/`):** **Barlow** and **JetBrains Mono** remain licensed under the **SIL Open Font License, Version 1.1** — see [assets/fonts/OFL.txt](assets/fonts/OFL.txt).
+- **Bundled Font Software (`assets/fonts/`):** **Barlow** and **Inter** remain licensed under the **SIL Open Font License, Version 1.1** — see [assets/fonts/OFL.txt](assets/fonts/OFL.txt).
 - **Third-Party Libraries & External Code Citations:** Full attributions for all Rust dependencies (`eframe`, `egui`, `nvml-wrapper`, `serde`, `libloading`, transitive crates) and referenced reverse-engineered NVAPI definitions from **LibreHardwareMonitor** (`MPL-2.0`) are documented in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

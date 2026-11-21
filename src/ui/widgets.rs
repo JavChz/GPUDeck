@@ -871,7 +871,7 @@ where
 }
 
 pub fn paint_reset_icon(painter: &Painter, center: Pos2, radius: f32, color: Color32) {
-    let steps = 14usize;
+    let steps = 24usize;
     let start = -0.75_f32;
     let sweep = 4.65_f32;
     let mut pts = Vec::with_capacity(steps + 1);
@@ -1088,7 +1088,7 @@ pub fn draw_arc_gauge(
             } else {
                 theme.bg_track
             };
-            paint_arc_strip(painter, center, radius, thickness, a0, sw, 2, col, col);
+            paint_arc_strip(painter, center, radius, thickness, a0, sw, 6, col, col, true);
         }
 
         if let Some(actual_c) = raw_value_c {
@@ -1173,9 +1173,10 @@ pub fn draw_arc_gauge(
             thickness,
             start_angle,
             total_sweep,
-            48,
+            96,
             theme.bg_track,
             theme.bg_track,
+            false,
         );
         painter.circle_filled(
             Pos2::new(
@@ -1213,9 +1214,10 @@ pub fn draw_arc_gauge(
                         thickness * mul,
                         start_angle,
                         active_sweep,
-                        44,
+                        72,
                         with_alpha(col_start, a),
                         with_alpha(col_end, a),
+                        true,
                     );
                 }
             }
@@ -1227,9 +1229,10 @@ pub fn draw_arc_gauge(
                 thickness,
                 start_angle,
                 active_sweep,
-                48,
+                96,
                 col_start,
                 col_end,
+                false,
             );
 
             if theme.gauge_style == GaugeStyle::AeroGloss {
@@ -1241,9 +1244,10 @@ pub fn draw_arc_gauge(
                     thickness * 0.22,
                     start_angle,
                     active_sweep,
-                    36,
+                    72,
                     with_alpha(Color32::WHITE, 80),
                     with_alpha(Color32::WHITE, 60),
+                    true,
                 );
             }
 
@@ -1534,6 +1538,26 @@ fn paint_peak_caption(
     );
 }
 
+fn feather_width(painter: &Painter) -> f32 {
+    let px = 1.0 / painter.ctx().pixels_per_point().max(1.0);
+    px * 1.15
+}
+
+fn push_ribbon_indices(mesh: &mut Mesh, slice_count: usize) {
+    // Each slice has 4 vertices: [outer_low, inner_low, inner_high, outer_high].
+    for i in 0..slice_count.saturating_sub(1) {
+        let a = (i * 4) as u32;
+        let b = a + 4;
+        for band in 0..3u32 {
+            let v0 = a + band;
+            let v1 = v0 + 1;
+            let v2 = b + band;
+            let v3 = v2 + 1;
+            mesh.indices.extend_from_slice(&[v0, v1, v2, v1, v3, v2]);
+        }
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 fn paint_arc_strip(
     painter: &Painter,
@@ -1545,38 +1569,69 @@ fn paint_arc_strip(
     segments: usize,
     color_start: Color32,
     color_end: Color32,
+    feather_ends: bool,
 ) {
     if sweep_angle.abs() < 0.001 || segments == 0 {
         return;
     }
-    let mut mesh = Mesh::default();
+    let aa = feather_width(painter);
     let half_t = thickness * 0.5;
-    let r_in = (radius - half_t).max(1.0);
+    let r_in = (radius - half_t).max(0.5);
     let r_out = radius + half_t;
+    let inset = (aa * 0.5).min((r_out - r_in) * 0.45);
+    let r0 = (r_in - aa * 0.5).max(0.1);
+    let r1 = r_in + inset;
+    let r2 = r_out - inset;
+    let r3 = r_out + aa * 0.5;
+
+    let mut mesh = Mesh::default();
+    let push_slice = |mesh: &mut Mesh, angle: f32, edge_col: Color32, core_col: Color32| {
+        let cos = angle.cos();
+        let sin = angle.sin();
+        for (r, c) in [(r0, edge_col), (r1, core_col), (r2, core_col), (r3, edge_col)] {
+            mesh.vertices.push(Vertex {
+                pos: Pos2::new(center.x + cos * r, center.y + sin * r),
+                uv: WHITE_UV,
+                color: c,
+            });
+        }
+    };
+
+    let mut slice_count = segments + 1;
+    let (core_start, core_sweep) = if feather_ends {
+        let sgn = sweep_angle.signum();
+        let d_ang = (aa / radius.max(1.0)).min(sweep_angle.abs() * 0.25);
+        push_slice(
+            &mut mesh,
+            start_angle - sgn * d_ang * 0.5,
+            Color32::TRANSPARENT,
+            Color32::TRANSPARENT,
+        );
+        slice_count += 2;
+        (start_angle + sgn * d_ang * 0.5, sweep_angle - sgn * d_ang)
+    } else {
+        (start_angle, sweep_angle)
+    };
 
     for i in 0..=segments {
         let t = i as f32 / segments as f32;
-        let a = start_angle + sweep_angle * t;
-        let cos = a.cos();
-        let sin = a.sin();
+        let a = core_start + core_sweep * t;
         let col = lerp_color(color_start, color_end, t);
-        mesh.vertices.push(Vertex {
-            pos: Pos2::new(center.x + cos * r_in, center.y + sin * r_in),
-            uv: WHITE_UV,
-            color: col,
-        });
-        mesh.vertices.push(Vertex {
-            pos: Pos2::new(center.x + cos * r_out, center.y + sin * r_out),
-            uv: WHITE_UV,
-            color: col,
-        });
+        push_slice(&mut mesh, a, Color32::TRANSPARENT, col);
     }
 
-    for i in 0..segments {
-        let idx = (i * 2) as u32;
-        mesh.indices
-            .extend_from_slice(&[idx, idx + 1, idx + 2, idx + 1, idx + 3, idx + 2]);
+    if feather_ends {
+        let sgn = sweep_angle.signum();
+        let d_ang = (aa / radius.max(1.0)).min(sweep_angle.abs() * 0.25);
+        push_slice(
+            &mut mesh,
+            start_angle + sweep_angle + sgn * d_ang * 0.5,
+            Color32::TRANSPARENT,
+            Color32::TRANSPARENT,
+        );
     }
+
+    push_ribbon_indices(&mut mesh, slice_count);
     painter.add(Shape::mesh(mesh));
 }
 
@@ -1593,29 +1648,64 @@ fn paint_gradient_line(
     if len < 0.5 {
         return;
     }
-    let perp = Vec2::new(-delta.y / len, delta.x / len) * (thickness * 0.5);
+    let aa = feather_width(painter);
+    let normal = Vec2::new(-delta.y / len, delta.x / len);
+    let half_t = thickness * 0.5;
+    let inset = (aa * 0.5).min(half_t * 0.45);
+    let offsets = [
+        (-(half_t + aa * 0.5), true),
+        (-(half_t - inset), false),
+        (half_t - inset, false),
+        (half_t + aa * 0.5, true),
+    ];
+
     let mut mesh = Mesh::default();
-    mesh.vertices.push(Vertex {
-        pos: p0 - perp,
-        uv: WHITE_UV,
-        color: c0,
-    });
-    mesh.vertices.push(Vertex {
-        pos: p0 + perp,
-        uv: WHITE_UV,
-        color: c0,
-    });
-    mesh.vertices.push(Vertex {
-        pos: p1 - perp,
-        uv: WHITE_UV,
-        color: c1,
-    });
-    mesh.vertices.push(Vertex {
-        pos: p1 + perp,
-        uv: WHITE_UV,
-        color: c1,
-    });
-    mesh.indices.extend_from_slice(&[0, 1, 2, 1, 3, 2]);
+    for (pt, col) in [(p0, c0), (p1, c1)] {
+        for (off, is_edge) in offsets {
+            mesh.vertices.push(Vertex {
+                pos: pt + normal * off,
+                uv: WHITE_UV,
+                color: if is_edge { Color32::TRANSPARENT } else { col },
+            });
+        }
+    }
+    push_ribbon_indices(&mut mesh, 2);
+    painter.add(Shape::mesh(mesh));
+}
+
+fn paint_feathered_hgradient_rect(
+    painter: &Painter,
+    left: f32,
+    right: f32,
+    top: f32,
+    bottom: f32,
+    left_col: Color32,
+    right_col: Color32,
+) {
+    let h = bottom - top;
+    if right <= left || h <= 0.1 {
+        return;
+    }
+    let aa = feather_width(painter);
+    let inset = (aa * 0.5).min(h * 0.45);
+    let ys = [
+        (top - aa * 0.5, true),
+        (top + inset, false),
+        (bottom - inset, false),
+        (bottom + aa * 0.5, true),
+    ];
+
+    let mut mesh = Mesh::default();
+    for (x, col) in [(left, left_col), (right, right_col)] {
+        for (y, is_edge) in ys {
+            mesh.vertices.push(Vertex {
+                pos: Pos2::new(x, y),
+                uv: WHITE_UV,
+                color: if is_edge { Color32::TRANSPARENT } else { col },
+            });
+        }
+    }
+    push_ribbon_indices(&mut mesh, 2);
     painter.add(Shape::mesh(mesh));
 }
 
@@ -1676,29 +1766,15 @@ pub fn draw_glow_bar(
             painter.circle_filled(Pos2::new(inner_left, rect.center().y), cap_r, start_color);
             painter.circle_filled(Pos2::new(inner_right, rect.center().y), cap_r, mid_col);
             if inner_right > inner_left {
-                let mut mesh = Mesh::default();
-                mesh.vertices.push(Vertex {
-                    pos: Pos2::new(inner_left, fill_rect.top()),
-                    uv: WHITE_UV,
-                    color: start_color,
-                });
-                mesh.vertices.push(Vertex {
-                    pos: Pos2::new(inner_left, fill_rect.bottom()),
-                    uv: WHITE_UV,
-                    color: start_color,
-                });
-                mesh.vertices.push(Vertex {
-                    pos: Pos2::new(inner_right, fill_rect.top()),
-                    uv: WHITE_UV,
-                    color: mid_col,
-                });
-                mesh.vertices.push(Vertex {
-                    pos: Pos2::new(inner_right, fill_rect.bottom()),
-                    uv: WHITE_UV,
-                    color: mid_col,
-                });
-                mesh.indices.extend_from_slice(&[0, 1, 2, 1, 3, 2]);
-                painter.add(Shape::mesh(mesh));
+                paint_feathered_hgradient_rect(
+                    painter,
+                    inner_left,
+                    inner_right,
+                    fill_rect.top(),
+                    fill_rect.bottom(),
+                    start_color,
+                    mid_col,
+                );
             }
             // Delicate 2px white glass gleam along upper rim
             let gleam_rect = Rect::from_min_max(
@@ -1745,29 +1821,15 @@ pub fn draw_glow_bar(
             painter.circle_filled(Pos2::new(inner_left, rect.center().y), cap_r, start_color);
             painter.circle_filled(Pos2::new(inner_right, rect.center().y), cap_r, mid_col);
             if inner_right > inner_left {
-                let mut mesh = Mesh::default();
-                mesh.vertices.push(Vertex {
-                    pos: Pos2::new(inner_left, fill_rect.top()),
-                    uv: WHITE_UV,
-                    color: start_color,
-                });
-                mesh.vertices.push(Vertex {
-                    pos: Pos2::new(inner_left, fill_rect.bottom()),
-                    uv: WHITE_UV,
-                    color: start_color,
-                });
-                mesh.vertices.push(Vertex {
-                    pos: Pos2::new(inner_right, fill_rect.top()),
-                    uv: WHITE_UV,
-                    color: mid_col,
-                });
-                mesh.vertices.push(Vertex {
-                    pos: Pos2::new(inner_right, fill_rect.bottom()),
-                    uv: WHITE_UV,
-                    color: mid_col,
-                });
-                mesh.indices.extend_from_slice(&[0, 1, 2, 1, 3, 2]);
-                painter.add(Shape::mesh(mesh));
+                paint_feathered_hgradient_rect(
+                    painter,
+                    inner_left,
+                    inner_right,
+                    fill_rect.top(),
+                    fill_rect.bottom(),
+                    start_color,
+                    mid_col,
+                );
             }
         }
     }

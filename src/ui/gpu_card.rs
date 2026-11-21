@@ -11,7 +11,7 @@ use super::widgets::{
     draw_sparkline_chart, draw_status_badge, paint_aero_gel_pill, paint_aero_orb,
     paint_lightning_icon, paint_reset_icon,
 };
-use crate::telemetry::guidelines::HealthBadge;
+use crate::telemetry::guidelines::{evaluate_temp_level, HealthBadge, MetricLevel};
 use crate::telemetry::{GpuSnapshot, PowerLimitMode};
 
 #[derive(Debug, Clone, Default)]
@@ -902,40 +902,39 @@ pub fn draw_gpu_card(
 
                     ui.add_space(10.0);
 
-                    // 4. Bottom 3-Chart Telemetry Strip
+                    // 4. Bottom 2-Row Concept-Grouped Telemetry Charts
                     let chart_gap = 10.0;
                     let chart_w = ((inner_w - chart_gap * 2.0) / 3.0).max(95.0);
-                    let chart_h = 84.0;
+                    let chart_h = 74.0;
                     let chart_size = Vec2::new(chart_w, chart_h);
 
+                    // Row 1: Thermals & Cooling
+                    draw_chart_group_label(ui, theme, inner_w, "THERMALS & COOLING");
+                    ui.add_space(4.0);
                     ui.horizontal(|ui| {
                         ui.spacing_mut().item_spacing.x = chart_gap;
 
                         // Chart 1: Core / Hotspot Temp History
-                        let core_disp_pts: VecDeque<f32> = gpu
-                            .history
-                            .core_temp
-                            .iter()
-                            .map(|&c| display_temp(c, use_fahrenheit))
-                            .collect();
-                        let hot_disp_pts: VecDeque<f32> = gpu
-                            .history
-                            .hotspot_temp
-                            .iter()
-                            .map(|&c| display_temp(c, use_fahrenheit))
-                            .collect();
-
+                        let core_disp_pts = map_display_temps(&gpu.history.core_temp, use_fahrenheit);
+                        let hot_disp_pts =
+                            map_display_temps(&gpu.history.hotspot_temp, use_fahrenheit);
                         let temp_readout = gpu
                             .thermals
                             .core
                             .map(|c| format_temp(c, use_fahrenheit))
                             .unwrap_or_else(|| "N/A".to_string());
-                        let t_col = match gpu.health_badge {
-                            HealthBadge::Healthy => theme.accent_primary,
-                            HealthBadge::Warm => theme.status_warm,
-                            HealthBadge::Critical | HealthBadge::Throttling => {
-                                theme.status_critical
-                            }
+                        let t_col = if gpu.throttle.thermal_throttling {
+                            theme.status_critical
+                        } else {
+                            gpu.thermals
+                                .core
+                                .map(|c| {
+                                    level_accent_color(
+                                        evaluate_temp_level(c, &gpu.guidelines.core),
+                                        theme,
+                                    )
+                                })
+                                .unwrap_or(theme.text_muted)
                         };
                         let (t_min, t_max) = if use_fahrenheit {
                             (68.0, 220.0)
@@ -957,7 +956,45 @@ pub fn draw_gpu_card(
                             Some(theme.chart_temp_secondary),
                         );
 
-                        // Chart 2: Fans (% & RPM)
+                        // Chart 2: Memory Temp
+                        let mem_disp_pts =
+                            map_display_temps(&gpu.history.memory_temp, use_fahrenheit);
+                        let mem_readout = gpu
+                            .thermals
+                            .memory
+                            .map(|m| format_temp(m, use_fahrenheit))
+                            .unwrap_or_else(|| "N/A".to_string());
+                        let m_col = gpu
+                            .thermals
+                            .memory
+                            .map(|m| {
+                                level_accent_color(
+                                    evaluate_temp_level(m, &gpu.guidelines.memory),
+                                    theme,
+                                )
+                            })
+                            .unwrap_or(theme.text_muted);
+                        let (m_min, m_max) = if use_fahrenheit {
+                            (68.0, 230.0)
+                        } else {
+                            (20.0, 110.0)
+                        };
+                        draw_sparkline_chart(
+                            ui,
+                            theme,
+                            chart_size,
+                            "Memory Temp",
+                            &mem_readout,
+                            &mem_disp_pts,
+                            m_min,
+                            m_max,
+                            temp_unit(use_fahrenheit),
+                            m_col,
+                            None,
+                            None,
+                        );
+
+                        // Chart 3: Fans (% & RPM)
                         let fan_readout = match (gpu.fans.speed_pct, gpu.fans.rpm) {
                             (Some(0), Some(0) | None) => "0% (Zero-RPM)".to_string(),
                             (Some(pct), Some(rpm)) => format!("{pct}% / {rpm} RPM"),
@@ -986,13 +1023,53 @@ pub fn draw_gpu_card(
                             None,
                             None,
                         );
+                    });
 
-                        // Chart 3: VRAM Usage
+                    ui.add_space(7.0);
+
+                    // Row 2: Workload & Power
+                    draw_chart_group_label(ui, theme, inner_w, "WORKLOAD & POWER");
+                    ui.add_space(4.0);
+                    ui.horizontal(|ui| {
+                        ui.spacing_mut().item_spacing.x = chart_gap;
+
+                        // Chart 4: GPU Usage (%)
+                        let util_readout = gpu
+                            .clocks
+                            .gpu_util_pct
+                            .map(|u| format!("{u}%"))
+                            .unwrap_or_else(|| "N/A".to_string());
+                        let util_col = if gpu.clocks.gpu_util_pct.is_some() {
+                            theme.accent_primary
+                        } else {
+                            theme.text_muted
+                        };
+                        draw_sparkline_chart(
+                            ui,
+                            theme,
+                            chart_size,
+                            "GPU Usage",
+                            &util_readout,
+                            &gpu.history.gpu_util_pct,
+                            0.0,
+                            100.0,
+                            "%",
+                            util_col,
+                            None,
+                            None,
+                        );
+
+                        // Chart 5: VRAM Usage (GB)
                         let vram_total_gb = gpu.vram.total_gb().max(1.0);
                         let vram_readout = if gpu.vram.total_mb > 0 {
                             format!("{:.1}/{:.0} GB", gpu.vram.used_gb(), vram_total_gb)
                         } else {
                             "N/A".to_string()
+                        };
+                        let vram_col = if gpu.vram.total_mb > 0 {
+                            theme.accent_secondary
+                        } else {
+                            theme.text_muted
                         };
                         draw_sparkline_chart(
                             ui,
@@ -1004,7 +1081,48 @@ pub fn draw_gpu_card(
                             0.0,
                             vram_total_gb,
                             " GB",
-                            theme.accent_primary,
+                            vram_col,
+                            None,
+                            None,
+                        );
+
+                        // Chart 6: Power Draw (W)
+                        let power_limit_w = gpu
+                            .power
+                            .enforced_limit_w
+                            .or(gpu.power.active_limit_w)
+                            .or(gpu.power.default_limit_w);
+                        let power_max_w = power_limit_w.unwrap_or(250.0).max(50.0);
+                        let power_readout = match (gpu.power.draw_w, power_limit_w) {
+                            (Some(d), Some(l)) => format!("{d:.0}/{l:.0}W"),
+                            (Some(d), None) => format!("{d:.0}W"),
+                            (None, _) => "N/A".to_string(),
+                        };
+                        let power_col = match gpu.power.draw_w {
+                            None => theme.text_muted,
+                            Some(d) => {
+                                let ratio = power_limit_w
+                                    .filter(|&l| l > 0.1)
+                                    .map(|l| d / l)
+                                    .unwrap_or(0.0);
+                                if ratio >= 0.92 {
+                                    theme.status_warm
+                                } else {
+                                    theme.accent_primary
+                                }
+                            }
+                        };
+                        draw_sparkline_chart(
+                            ui,
+                            theme,
+                            chart_size,
+                            "Power Draw",
+                            &power_readout,
+                            &gpu.history.power_w,
+                            0.0,
+                            power_max_w,
+                            "W",
+                            power_col,
                             None,
                             None,
                         );
@@ -1079,4 +1197,45 @@ where
         },
     );
     resp
+}
+
+fn draw_chart_group_label(ui: &mut Ui, theme: &ThemeSpec, width: f32, label: &str) {
+    let (rect, _) = ui.allocate_exact_size(Vec2::new(width, 13.0), Sense::hover());
+    let painter = ui.painter();
+    let galley = painter.layout_no_wrap(label.to_string(), theme.font_semibold(9.5), theme.text_muted);
+    let label_w = galley.size().x;
+    let label_h = galley.size().y;
+    painter.galley(
+        Pos2::new(rect.left() + 2.0, rect.center().y - label_h * 0.5),
+        galley,
+        theme.text_muted,
+    );
+    let line_x0 = (rect.left() + 2.0 + label_w + 8.0).min(rect.right() - 2.0);
+    if rect.right() - 2.0 > line_x0 {
+        painter.line_segment(
+            [
+                Pos2::new(line_x0, rect.center().y),
+                Pos2::new(rect.right() - 2.0, rect.center().y),
+            ],
+            Stroke::new(
+                1.0_f32,
+                with_alpha(
+                    theme.border_subtle,
+                    if theme.is_dark { 150 } else { 130 },
+                ),
+            ),
+        );
+    }
+}
+
+fn map_display_temps(pts: &VecDeque<f32>, use_fahrenheit: bool) -> VecDeque<f32> {
+    pts.iter().map(|&c| display_temp(c, use_fahrenheit)).collect()
+}
+
+fn level_accent_color(level: MetricLevel, theme: &ThemeSpec) -> Color32 {
+    match level {
+        MetricLevel::Healthy => theme.accent_primary,
+        MetricLevel::Warm => theme.status_warm,
+        MetricLevel::Critical => theme.status_critical,
+    }
 }

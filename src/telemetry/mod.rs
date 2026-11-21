@@ -158,9 +158,11 @@ pub struct ClockTelemetry {
 pub struct GpuHistory {
     pub core_temp: VecDeque<f32>,
     pub hotspot_temp: VecDeque<f32>,
+    pub memory_temp: VecDeque<f32>,
     pub fan_pct: VecDeque<f32>,
     pub fan_rpm: VecDeque<f32>,
     pub vram_used_gb: VecDeque<f32>,
+    pub gpu_util_pct: VecDeque<f32>,
     pub power_w: VecDeque<f32>,
 }
 
@@ -169,9 +171,11 @@ impl Default for GpuHistory {
         Self {
             core_temp: VecDeque::with_capacity(HISTORY_CAPACITY),
             hotspot_temp: VecDeque::with_capacity(HISTORY_CAPACITY),
+            memory_temp: VecDeque::with_capacity(HISTORY_CAPACITY),
             fan_pct: VecDeque::with_capacity(HISTORY_CAPACITY),
             fan_rpm: VecDeque::with_capacity(HISTORY_CAPACITY),
             vram_used_gb: VecDeque::with_capacity(HISTORY_CAPACITY),
+            gpu_util_pct: VecDeque::with_capacity(HISTORY_CAPACITY),
             power_w: VecDeque::with_capacity(HISTORY_CAPACITY),
         }
     }
@@ -192,6 +196,9 @@ impl GpuHistory {
         if let Some(h) = sample.thermals.hotspot {
             Self::push_bounded(&mut self.hotspot_temp, h);
         }
+        if let Some(m) = sample.thermals.memory {
+            Self::push_bounded(&mut self.memory_temp, m);
+        }
         if let Some(pct) = sample.fans.speed_pct {
             Self::push_bounded(&mut self.fan_pct, pct as f32);
         }
@@ -199,6 +206,9 @@ impl GpuHistory {
             Self::push_bounded(&mut self.fan_rpm, rpm as f32);
         }
         Self::push_bounded(&mut self.vram_used_gb, sample.vram.used_gb());
+        if let Some(u) = sample.clocks.gpu_util_pct {
+            Self::push_bounded(&mut self.gpu_util_pct, u as f32);
+        }
         if let Some(w) = sample.power.draw_w {
             Self::push_bounded(&mut self.power_w, w);
         }

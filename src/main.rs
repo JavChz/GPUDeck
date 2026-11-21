@@ -75,7 +75,7 @@ fn main() -> eframe::Result<()> {
     let icon = Arc::new(build_app_icon());
     let viewport = egui::ViewportBuilder::default()
         .with_title("GPUDeck")
-        .with_inner_size([1280.0, 720.0])
+        .with_inner_size([1280.0, 820.0])
         .with_min_inner_size([640.0, 540.0])
         .with_icon(icon);
 
@@ -270,7 +270,11 @@ mod tests {
         evaluate_overall_health, evaluate_temp_level, guidelines_for_gpu, HealthBadge,
         HealthEvalInput, MetricLevel,
     };
-    use super::telemetry::{classify_power_mode, GpuHistory, PowerLimitMode, HISTORY_CAPACITY};
+    use super::telemetry::{
+        classify_power_mode, ClockTelemetry, FanTelemetry, GpuHistory, GpuVendor, PowerLimitMode,
+        PowerTelemetry, RawGpuSample, ThermalTelemetry, ThrottleTelemetry, VramTelemetry,
+        HISTORY_CAPACITY,
+    };
     use super::ui::theme::{ThemeId, ThemeSpec};
 
     #[test]
@@ -405,6 +409,63 @@ mod tests {
         }
         assert_eq!(buf.len(), HISTORY_CAPACITY);
         assert_eq!(buf.front().copied(), Some(25.0));
+    }
+
+    #[test]
+    fn test_history_push_sample_tracks_all_series() {
+        let mut hist = GpuHistory::default();
+        for i in 0..(HISTORY_CAPACITY + 10) {
+            let sample = RawGpuSample {
+                key: "test-gpu".to_string(),
+                index: 0,
+                name: "Test GPU".to_string(),
+                vendor: GpuVendor::Nvidia,
+                pci_bus_id: "0000:01:00.0".to_string(),
+                driver_version: None,
+                architecture: None,
+                thermals: ThermalTelemetry {
+                    core: Some(40.0 + i as f32),
+                    hotspot: Some(50.0 + i as f32),
+                    memory: Some(60.0 + i as f32),
+                    ..Default::default()
+                },
+                power: PowerTelemetry {
+                    draw_w: Some(120.0 + i as f32),
+                    ..Default::default()
+                },
+                throttle: ThrottleTelemetry::default(),
+                fans: FanTelemetry {
+                    speed_pct: Some(55),
+                    rpm: Some(1800),
+                    ..Default::default()
+                },
+                vram: VramTelemetry {
+                    used_mb: 8192,
+                    total_mb: 12288,
+                },
+                clocks: ClockTelemetry {
+                    gpu_util_pct: Some((i % 101) as u32),
+                    ..Default::default()
+                },
+            };
+            hist.push_sample(&sample);
+        }
+
+        assert_eq!(hist.core_temp.len(), HISTORY_CAPACITY);
+        assert_eq!(hist.hotspot_temp.len(), HISTORY_CAPACITY);
+        assert_eq!(hist.memory_temp.len(), HISTORY_CAPACITY);
+        assert_eq!(hist.fan_pct.len(), HISTORY_CAPACITY);
+        assert_eq!(hist.fan_rpm.len(), HISTORY_CAPACITY);
+        assert_eq!(hist.vram_used_gb.len(), HISTORY_CAPACITY);
+        assert_eq!(hist.gpu_util_pct.len(), HISTORY_CAPACITY);
+        assert_eq!(hist.power_w.len(), HISTORY_CAPACITY);
+
+        assert_eq!(hist.core_temp.front().copied(), Some(50.0));
+        assert_eq!(hist.hotspot_temp.front().copied(), Some(60.0));
+        assert_eq!(hist.memory_temp.front().copied(), Some(70.0));
+        assert_eq!(hist.power_w.front().copied(), Some(130.0));
+        assert_eq!(hist.gpu_util_pct.front().copied(), Some(10.0));
+        assert_eq!(hist.vram_used_gb.back().copied(), Some(8.0));
     }
 
     #[test]

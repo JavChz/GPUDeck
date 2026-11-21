@@ -20,7 +20,9 @@ A cross-platform (Windows & Linux) multi-GPU thermal, power limit, and throttlin
 - **Power Limit & Software Cap Detection**:
   - Compares enforced power ceiling against factory default TDP to show `100% (No Software Limit)`, `SW Limit (<99%)`, or `Unlocked (>101%)`.
   - Reads active NVML/sysfs throttle reasons (`SW Power Cap`, `HW Thermal Slowdown`, `SW Thermal Slowdown`, `HW Power Brake`, `App Clocks Cap`).
-- **Live Telemetry Sparklines**: Rolling history for Core/Hotspot temperatures, Fan % & RPM (including Zero-RPM detection), and VRAM usage.
+- **Live Telemetry Sparklines (2 Conceptual Rows)**:
+  - **Thermals & Cooling**: Core/Hotspot temperatures, Memory temperature, and Fan % & RPM (including Zero-RPM detection).
+  - **Workload & Power**: GPU utilization (%), VRAM usage (GB), and Power draw (W).
 - **9 Built-In Themes (Persisted Automatically)**:
   - `neo` (Neo — default dark neon cockpit)
   - `frutiger-aero` (Frutiger Aero — sky bubbles & glossy glass)

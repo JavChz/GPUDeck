@@ -3,15 +3,15 @@ use std::f32::consts::PI;
 
 use egui::epaint::{Mesh, Vertex, WHITE_UV};
 use egui::{
-    Align2, Color32, CornerRadius, Painter, Pos2, Rect, Response, Sense, Shape, Stroke, StrokeKind,
-    Ui, Vec2,
+    Align2, Color32, CornerRadius, Frame, Margin, Painter, Pos2, Rect, Response, Sense, Shape,
+    Stroke, StrokeKind, Ui, Vec2,
 };
 
 use super::theme::{
     display_temp, format_temp, lerp_color, temp_unit, with_alpha, BackdropStyle, BarStyle,
     GaugeStyle, HeaderStyle, ThemeSpec,
 };
-use crate::telemetry::guidelines::{evaluate_temp_level, HealthBadge, TempRange};
+use crate::telemetry::guidelines::{evaluate_temp_level, HealthBadge, MetricLevel, TempRange};
 
 pub fn paint_ambient_backdrop(painter: &Painter, rect: Rect, theme: &ThemeSpec) {
     match theme.backdrop_style {
@@ -256,6 +256,7 @@ pub fn draw_header_bar(
     theme_menu_open: bool,
     settings_open: bool,
     info_open: bool,
+    update_available: bool,
 ) -> HeaderActionResult {
     let avail_w = ui.available_width();
     let header_h = 52.0;
@@ -411,7 +412,7 @@ pub fn draw_header_bar(
                 rect.center(),
                 Align2::CENTER_CENTER,
                 "[ GPUDECK :: TELEMETRY ]",
-                theme.font_title(15.5),
+                theme.font_mono_bold(14.5),
                 theme.header_text_primary,
             );
         }
@@ -482,8 +483,18 @@ pub fn draw_header_bar(
             [Pos2::new(c.x, c.y - 1.2), Pos2::new(c.x, c.y + 4.8)],
             Stroke::new(1.8_f32, col),
         );
-    })
-    .on_hover_text("Thermal & Power Guidelines");
+    });
+    if update_available {
+        let dot_c = Pos2::new(info_rect.right() - 4.5, info_rect.top() + 4.5);
+        ui.painter().circle_filled(dot_c, 3.5, theme.accent_primary);
+        ui.painter()
+            .circle_stroke(dot_c, 3.5, Stroke::new(1.0_f32, theme.bg_header));
+    }
+    let info_resp = info_resp.on_hover_text(if update_available {
+        "About, Updates & Guidelines (Update available!)"
+    } else {
+        "About, Updates & Guidelines"
+    });
     if info_resp.clicked() {
         result.toggle_info = true;
     }
@@ -1090,7 +1101,7 @@ pub fn draw_arc_gauge(
                 Pos2::new(center.x, center.y + y_shift),
                 Align2::CENTER_CENTER,
                 val_str,
-                theme.font_title((size * 0.21).clamp(17.0, 27.0)),
+                theme.font_mono_bold((size * 0.21).clamp(17.0, 27.0)),
                 theme.text_primary,
             );
             paint_peak_caption(
@@ -1108,7 +1119,7 @@ pub fn draw_arc_gauge(
                 Pos2::new(center.x, center.y - 4.0),
                 Align2::CENTER_CENTER,
                 "N/A",
-                theme.font_title((size * 0.18).clamp(15.0, 22.0)),
+                theme.font_mono_bold((size * 0.18).clamp(15.0, 22.0)),
                 theme.text_muted,
             );
             painter.text(
@@ -1254,7 +1265,7 @@ pub fn draw_arc_gauge(
                     Pos2::new(center.x, center.y + y_shift + 1.0),
                     Align2::CENTER_CENTER,
                     &val_str,
-                    theme.font_title(val_font_size),
+                    theme.font_mono_bold(val_font_size),
                     Color32::from_rgba_unmultiplied(0, 0, 0, 120),
                 );
             } else if theme.gauge_style == GaugeStyle::AeroGloss {
@@ -1262,7 +1273,7 @@ pub fn draw_arc_gauge(
                     Pos2::new(center.x, center.y + y_shift + 1.0),
                     Align2::CENTER_CENTER,
                     &val_str,
-                    theme.font_title(val_font_size),
+                    theme.font_mono_bold(val_font_size),
                     with_alpha(Color32::WHITE, 210),
                 );
             }
@@ -1270,7 +1281,7 @@ pub fn draw_arc_gauge(
                 Pos2::new(center.x, center.y + y_shift),
                 Align2::CENTER_CENTER,
                 val_str,
-                theme.font_title(val_font_size),
+                theme.font_mono_bold(val_font_size),
                 theme.text_primary,
             );
 
@@ -1302,7 +1313,7 @@ pub fn draw_arc_gauge(
                 Pos2::new(center.x, center.y - 4.0),
                 Align2::CENTER_CENTER,
                 "N/A",
-                theme.font_title((size * 0.19).clamp(16.0, 24.0)),
+                theme.font_mono_bold((size * 0.19).clamp(16.0, 24.0)),
                 theme.text_muted,
             );
             painter.text(
@@ -1345,7 +1356,7 @@ pub fn draw_arc_gauge(
         painter.layout_no_wrap("Safe ".to_string(), theme.font_body(10.0), prefix_col);
     let val_galley = painter.layout_no_wrap(
         format!("<{}", format_temp(range.healthy_max, use_fahrenheit)),
-        theme.font_value(10.0),
+        theme.font_mono_bold(10.0),
         val_col,
     );
     let prefix_w = prefix_galley.size().x;
@@ -1383,55 +1394,98 @@ pub fn draw_arc_gauge(
     );
 
     resp.on_hover_ui(|ui| {
-        ui.set_min_width(210.0);
-        ui.label(
-            egui::RichText::new(label.to_ascii_uppercase())
-                .font(theme.font_title(12.5))
-                .color(theme.accent_primary),
-        );
-        ui.add_space(4.0);
-        if let Some(c) = raw_value_c {
-            let level = evaluate_temp_level(c, range);
-            let status_txt = match level {
-                crate::telemetry::guidelines::MetricLevel::Healthy => "Healthy",
-                crate::telemetry::guidelines::MetricLevel::Warm => "Warm (Check airflow)",
-                crate::telemetry::guidelines::MetricLevel::Critical => "Critical (Overheating)",
+        draw_tooltip_body(ui, 224.0, |ui| {
+            let badge = if let Some(c) = raw_value_c {
+                match evaluate_temp_level(c, range) {
+                    MetricLevel::Healthy => ("Healthy", theme.status_healthy),
+                    MetricLevel::Warm => ("Warm", theme.status_warm),
+                    MetricLevel::Critical => ("Critical", theme.status_critical),
+                }
+            } else {
+                ("No Sensor", theme.text_muted)
             };
-            ui.label(format!(
-                "Current: {:.1}{} ({status_txt})",
-                display_temp(c, use_fahrenheit),
-                temp_unit(use_fahrenheit)
-            ));
-            if let Some(pk) = peak_c {
-                let pk_lvl = evaluate_temp_level(pk, range);
-                let pk_txt = match pk_lvl {
-                    crate::telemetry::guidelines::MetricLevel::Healthy => "Healthy",
-                    crate::telemetry::guidelines::MetricLevel::Warm => "Warm",
-                    crate::telemetry::guidelines::MetricLevel::Critical => "Critical",
+            draw_tooltip_header(ui, theme, &label.to_ascii_uppercase(), Some(badge));
+
+            if let Some(c) = raw_value_c {
+                let cur_col = match evaluate_temp_level(c, range) {
+                    MetricLevel::Healthy => theme.text_primary,
+                    MetricLevel::Warm => theme.status_warm,
+                    MetricLevel::Critical => theme.status_critical,
                 };
-                ui.label(format!(
-                    "Recorded Max: {:.1}{} ({pk_txt})",
-                    display_temp(pk, use_fahrenheit),
-                    temp_unit(use_fahrenheit)
-                ));
+                draw_tooltip_kv(
+                    ui,
+                    theme,
+                    None,
+                    "Current",
+                    &format!(
+                        "{:.1}{}",
+                        display_temp(c, use_fahrenheit),
+                        temp_unit(use_fahrenheit)
+                    ),
+                    cur_col,
+                    true,
+                );
+                if let Some(pk) = peak_c {
+                    let pk_col = match evaluate_temp_level(pk, range) {
+                        MetricLevel::Healthy => theme.text_primary,
+                        MetricLevel::Warm => theme.status_warm,
+                        MetricLevel::Critical => theme.status_critical,
+                    };
+                    draw_tooltip_kv(
+                        ui,
+                        theme,
+                        None,
+                        "Recorded Max",
+                        &format!(
+                            "{:.1}{}",
+                            display_temp(pk, use_fahrenheit),
+                            temp_unit(use_fahrenheit)
+                        ),
+                        pk_col,
+                        true,
+                    );
+                }
+            } else {
+                ui.label(
+                    egui::RichText::new(unavailable_reason.unwrap_or("No hardware sensor exposed"))
+                        .font(theme.font_body(11.0))
+                        .color(theme.text_muted),
+                );
             }
-        } else {
-            ui.label(unavailable_reason.unwrap_or("No hardware sensor exposed"));
-        }
-        ui.separator();
-        ui.label(format!(
-            "Healthy: < {}",
-            format_temp(range.healthy_max, use_fahrenheit)
-        ));
-        ui.label(format!(
-            "Warm: {} – {}",
-            format_temp(range.healthy_max, use_fahrenheit),
-            format_temp(range.warn_max, use_fahrenheit)
-        ));
-        ui.label(format!(
-            "Max Spec: {}",
-            format_temp(range.max_spec, use_fahrenheit)
-        ));
+
+            draw_tooltip_section(ui, theme, "THRESHOLDS");
+            draw_tooltip_kv(
+                ui,
+                theme,
+                Some(theme.status_healthy),
+                "Healthy",
+                &format!("< {}", format_temp(range.healthy_max, use_fahrenheit)),
+                theme.text_primary,
+                false,
+            );
+            draw_tooltip_kv(
+                ui,
+                theme,
+                Some(theme.status_warm),
+                "Warm",
+                &format!(
+                    "{:.0}–{}",
+                    display_temp(range.healthy_max, use_fahrenheit),
+                    format_temp(range.warn_max, use_fahrenheit)
+                ),
+                theme.status_warm,
+                false,
+            );
+            draw_tooltip_kv(
+                ui,
+                theme,
+                Some(theme.status_critical),
+                "Max Spec",
+                &format_temp(range.max_spec, use_fahrenheit),
+                theme.status_critical,
+                false,
+            );
+        });
     });
 }
 
@@ -1505,12 +1559,12 @@ fn paint_peak_caption(
         crate::telemetry::guidelines::MetricLevel::Warm => theme.status_warm,
         crate::telemetry::guidelines::MetricLevel::Critical => theme.status_critical,
     };
-    let font_sz = (size * 0.088).clamp(9.5, 11.5);
+    let font_sz = (size * 0.082).clamp(9.0, 10.5);
     painter.text(
-        Pos2::new(center.x, center.y + radius * 0.50),
+        Pos2::new(center.x, center.y + radius * 0.45),
         Align2::CENTER_CENTER,
         format!("Max {}", format_temp(pk, use_fahrenheit)),
-        theme.font_ui(font_sz),
+        theme.font_mono(font_sz),
         pk_col,
     );
 }
@@ -1920,7 +1974,7 @@ pub fn draw_sparkline_chart(
         Pos2::new(rect.right() - 8.0, rect.top() + 10.0),
         Align2::RIGHT_CENTER,
         readout,
-        theme.font_value(10.5),
+        theme.font_mono_bold(10.0),
         accent_color,
     );
 
@@ -1961,7 +2015,7 @@ pub fn draw_sparkline_chart(
             Pos2::new(plot.left() - 4.0, y),
             Align2::RIGHT_CENTER,
             label,
-            theme.font_body(8.5),
+            theme.font_mono(8.5),
             theme.text_muted,
         );
     }
@@ -2010,21 +2064,162 @@ pub fn draw_sparkline_chart(
 
     if !points.is_empty() {
         resp.on_hover_ui(|ui| {
-            let cur = points.back().copied().unwrap_or(0.0);
-            let min_v = points.iter().copied().fold(f32::INFINITY, f32::min);
-            let max_v = points.iter().copied().fold(f32::NEG_INFINITY, f32::max);
-            ui.label(
-                egui::RichText::new(title.to_ascii_uppercase())
-                    .font(theme.font_title(11.5))
-                    .color(accent_color),
-            );
-            ui.label(format!("Current: {:.1}{unit}", cur));
-            ui.label(format!(
-                "Window Min/Max: {:.1}{unit} / {:.1}{unit}",
-                min_v, max_v
-            ));
+            draw_tooltip_body(ui, 204.0, |ui| {
+                let cur = points.back().copied().unwrap_or(0.0);
+                let min_v = points.iter().copied().fold(f32::INFINITY, f32::min);
+                let max_v = points.iter().copied().fold(f32::NEG_INFINITY, f32::max);
+                draw_tooltip_header(ui, theme, &title.to_ascii_uppercase(), None);
+                draw_tooltip_kv(
+                    ui,
+                    theme,
+                    None,
+                    "Current",
+                    &format!("{cur:.1}{unit}"),
+                    accent_color,
+                    true,
+                );
+                draw_tooltip_kv(
+                    ui,
+                    theme,
+                    None,
+                    "Window Min",
+                    &format!("{min_v:.1}{unit}"),
+                    theme.text_primary,
+                    false,
+                );
+                draw_tooltip_kv(
+                    ui,
+                    theme,
+                    None,
+                    "Window Max",
+                    &format!("{max_v:.1}{unit}"),
+                    theme.text_primary,
+                    false,
+                );
+            });
         });
     }
+}
+
+pub fn draw_tooltip_body<R>(
+    ui: &mut Ui,
+    width: f32,
+    add_contents: impl FnOnce(&mut Ui) -> R,
+) -> R {
+    ui.set_max_width(width + 6.0);
+    Frame::new()
+        .inner_margin(Margin::symmetric(3, 2))
+        .show(ui, |ui| {
+            ui.set_width(width);
+            ui.set_max_width(width);
+            ui.spacing_mut().item_spacing = Vec2::new(6.0, 4.0);
+            add_contents(ui)
+        })
+        .inner
+}
+
+pub fn draw_tooltip_header(
+    ui: &mut Ui,
+    theme: &ThemeSpec,
+    title: &str,
+    badge: Option<(&str, Color32)>,
+) {
+    ui.horizontal(|ui| {
+        ui.label(
+            egui::RichText::new(title)
+                .font(theme.font_title(12.0))
+                .color(theme.text_primary),
+        );
+        if let Some((badge_text, badge_col)) = badge {
+            ui.add_space(10.0);
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                let galley = ui.painter().layout_no_wrap(
+                    badge_text.to_string(),
+                    theme.font_value(10.0),
+                    badge_col,
+                );
+                let pill_w = galley.size().x + 12.0;
+                let (rect, _) = ui.allocate_exact_size(Vec2::new(pill_w, 18.0), Sense::hover());
+                let cr = CornerRadius::same(theme.badge_radius.min(5).max(3));
+                let p = ui.painter();
+                p.rect_filled(rect, cr, with_alpha(badge_col, 26));
+                p.rect_stroke(
+                    rect,
+                    cr,
+                    Stroke::new(0.9_f32, with_alpha(badge_col, 140)),
+                    StrokeKind::Inside,
+                );
+                p.galley(
+                    Pos2::new(
+                        rect.center().x - galley.size().x * 0.5,
+                        rect.center().y - galley.size().y * 0.5,
+                    ),
+                    galley,
+                    badge_col,
+                );
+            });
+        }
+    });
+    ui.add_space(2.0);
+    let (div_r, _) = ui.allocate_exact_size(Vec2::new(ui.available_width(), 1.0), Sense::hover());
+    ui.painter().line_segment(
+        [
+            Pos2::new(div_r.left(), div_r.center().y),
+            Pos2::new(div_r.right(), div_r.center().y),
+        ],
+        Stroke::new(1.0_f32, with_alpha(theme.border_subtle, 160)),
+    );
+    ui.add_space(3.0);
+}
+
+pub fn draw_tooltip_section(ui: &mut Ui, theme: &ThemeSpec, label: &str) {
+    ui.add_space(3.0);
+    let (div_r, _) = ui.allocate_exact_size(Vec2::new(ui.available_width(), 1.0), Sense::hover());
+    ui.painter().line_segment(
+        [
+            Pos2::new(div_r.left(), div_r.center().y),
+            Pos2::new(div_r.right(), div_r.center().y),
+        ],
+        Stroke::new(1.0_f32, with_alpha(theme.border_subtle, 145)),
+    );
+    ui.add_space(3.0);
+    ui.label(
+        egui::RichText::new(label)
+            .font(theme.font_title_semi(9.5))
+            .color(theme.text_muted),
+    );
+    ui.add_space(1.0);
+}
+
+pub fn draw_tooltip_kv(
+    ui: &mut Ui,
+    theme: &ThemeSpec,
+    dot: Option<Color32>,
+    key: &str,
+    value: &str,
+    value_col: Color32,
+    bold_value: bool,
+) {
+    ui.horizontal(|ui| {
+        if let Some(dot_col) = dot {
+            let (dot_r, _) = ui.allocate_exact_size(Vec2::new(6.0, 14.0), Sense::hover());
+            ui.painter().circle_filled(dot_r.center(), 2.8, dot_col);
+        }
+        ui.label(
+            egui::RichText::new(key)
+                .font(theme.font_ui(12.0))
+                .color(theme.text_secondary),
+        );
+        ui.add_space(12.0);
+        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+            let font = if bold_value {
+                theme.font_mono_bold(12.5)
+            } else {
+                theme.font_mono(11.5)
+            };
+            ui.label(egui::RichText::new(value).font(font).color(value_col));
+        });
+    });
 }
 
 fn map_y(v: f32, min_y: f32, max_y: f32, plot: Rect) -> f32 {

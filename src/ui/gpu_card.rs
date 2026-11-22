@@ -8,7 +8,8 @@ use egui::{
 use super::theme::{display_temp, format_temp, temp_unit, with_alpha, ThemeSpec};
 use super::widgets::{
     build_aero_recessed_well_shapes, draw_arc_gauge, draw_glow_bar, draw_segmented_throttle_bar,
-    draw_sparkline_chart, draw_status_badge, paint_aero_gel_pill, paint_aero_orb,
+    draw_sparkline_chart, draw_status_badge, draw_tooltip_body, draw_tooltip_header,
+    draw_tooltip_kv, draw_tooltip_section, paint_aero_gel_pill, paint_aero_orb,
     paint_lightning_icon, paint_reset_icon,
 };
 use crate::telemetry::guidelines::{evaluate_temp_level, HealthBadge, MetricLevel};
@@ -294,7 +295,7 @@ pub fn draw_gpu_card(
                                     );
                                     let d_galley = ui.painter().layout_no_wrap(
                                         delta_txt.clone(),
-                                        theme.font_value(10.0),
+                                        theme.font_mono_bold(10.0),
                                         d_col,
                                     );
                                     let d_w = (d_galley.size().x + 14.0).max(66.0);
@@ -316,7 +317,7 @@ pub fn draw_gpu_card(
                                         d_rect.center(),
                                         Align2::CENTER_CENTER,
                                         delta_txt,
-                                        theme.font_value(10.0),
+                                        theme.font_mono_bold(10.0),
                                         d_col,
                                     );
                                     d_resp.on_hover_text(
@@ -330,7 +331,7 @@ pub fn draw_gpu_card(
                                 );
                                 let s_galley = ui.painter().layout_no_wrap(
                                     spec_txt.clone(),
-                                    theme.font_ui(10.0),
+                                    theme.font_mono(10.0),
                                     theme.text_secondary,
                                 );
                                 let s_w = (s_galley.size().x + 14.0).max(68.0);
@@ -384,97 +385,133 @@ pub fn draw_gpu_card(
                                     s_rect.center(),
                                     Align2::CENTER_CENTER,
                                     spec_txt,
-                                    theme.font_ui(10.0),
+                                    theme.font_mono(10.0),
                                     s_text_col,
                                 );
                                 s_resp.on_hover_ui(|ui| {
-                                    ui.set_min_width(225.0);
-                                    ui.label(
-                                        egui::RichText::new("THERMAL THRESHOLDS")
-                                            .font(theme.font_title(12.5))
-                                            .color(theme.accent_primary),
-                                    );
-                                    ui.add_space(4.0);
-                                    ui.label(format!(
-                                        "Core: Safe <{}  •  Max Spec {}",
-                                        format_temp(gpu.guidelines.core.healthy_max, use_fahrenheit),
-                                        format_temp(gpu.guidelines.core.max_spec, use_fahrenheit),
-                                    ));
-                                    ui.label(format!(
-                                        "Hotspot: Safe <{}  •  Max Spec {}",
-                                        format_temp(
-                                            gpu.guidelines.hotspot.healthy_max,
-                                            use_fahrenheit
-                                        ),
-                                        format_temp(gpu.guidelines.hotspot.max_spec, use_fahrenheit),
-                                    ));
-                                    ui.label(format!(
-                                        "Memory ({}): Safe <{}  •  Max Spec {}",
-                                        gpu.guidelines.vram_class,
-                                        format_temp(
-                                            gpu.guidelines.memory.healthy_max,
-                                            use_fahrenheit
-                                        ),
-                                        format_temp(gpu.guidelines.memory.max_spec, use_fahrenheit),
-                                    ));
-
-                                    let mut hw_lines = Vec::new();
-                                    if let Some(t) = gpu.thermals.hw_target_temp {
-                                        hw_lines.push(format!(
-                                            "Target: {}",
-                                            format_temp(t, use_fahrenheit)
-                                        ));
-                                    }
-                                    if let Some(t) = gpu.thermals.hw_max_operating_temp {
-                                        hw_lines.push(format!(
-                                            "Max Operating: {}",
-                                            format_temp(t, use_fahrenheit)
-                                        ));
-                                    }
-                                    if let Some(t) = gpu.thermals.hw_slowdown_temp {
-                                        hw_lines.push(format!(
-                                            "Slowdown: {}",
-                                            format_temp(t, use_fahrenheit)
-                                        ));
-                                    }
-                                    if let Some(t) = gpu.thermals.hw_shutdown_temp {
-                                        hw_lines.push(format!(
-                                            "Shutdown: {}",
-                                            format_temp(t, use_fahrenheit)
-                                        ));
-                                    }
-                                    if let Some(t) = gpu.thermals.hw_memory_max_temp {
-                                        hw_lines.push(format!(
-                                            "Memory Max: {}",
-                                            format_temp(t, use_fahrenheit)
-                                        ));
-                                    }
-                                    if !hw_lines.is_empty() {
-                                        ui.add_space(4.0);
-                                        ui.separator();
-                                        ui.label(
-                                            egui::RichText::new(format!(
-                                                "Driver Limits: {}",
-                                                hw_lines.join("  •  ")
-                                            ))
-                                            .font(theme.font_body(10.5))
-                                            .color(theme.text_secondary),
+                                    draw_tooltip_body(ui, 252.0, |ui| {
+                                        draw_tooltip_header(
+                                            ui,
+                                            theme,
+                                            "THERMAL THRESHOLDS",
+                                            Some((&gpu.guidelines.vram_class, theme.accent_primary)),
                                         );
-                                        ui.label(
-                                            egui::RichText::new("Source: Live GPU driver limits")
+                                        draw_tooltip_kv(
+                                            ui,
+                                            theme,
+                                            None,
+                                            "Core",
+                                            &format!(
+                                                "Safe <{}  ·  Max {}",
+                                                format_temp(
+                                                    gpu.guidelines.core.healthy_max,
+                                                    use_fahrenheit
+                                                ),
+                                                format_temp(
+                                                    gpu.guidelines.core.max_spec,
+                                                    use_fahrenheit
+                                                ),
+                                            ),
+                                            theme.text_primary,
+                                            false,
+                                        );
+                                        draw_tooltip_kv(
+                                            ui,
+                                            theme,
+                                            None,
+                                            "Hotspot",
+                                            &format!(
+                                                "Safe <{}  ·  Max {}",
+                                                format_temp(
+                                                    gpu.guidelines.hotspot.healthy_max,
+                                                    use_fahrenheit
+                                                ),
+                                                format_temp(
+                                                    gpu.guidelines.hotspot.max_spec,
+                                                    use_fahrenheit
+                                                ),
+                                            ),
+                                            theme.text_primary,
+                                            false,
+                                        );
+                                        draw_tooltip_kv(
+                                            ui,
+                                            theme,
+                                            None,
+                                            "Memory",
+                                            &format!(
+                                                "Safe <{}  ·  Max {}",
+                                                format_temp(
+                                                    gpu.guidelines.memory.healthy_max,
+                                                    use_fahrenheit
+                                                ),
+                                                format_temp(
+                                                    gpu.guidelines.memory.max_spec,
+                                                    use_fahrenheit
+                                                ),
+                                            ),
+                                            theme.text_primary,
+                                            false,
+                                        );
+
+                                        let mut hw_rows = Vec::new();
+                                        if let Some(t) = gpu.thermals.hw_target_temp {
+                                            hw_rows.push(("Target", format_temp(t, use_fahrenheit)));
+                                        }
+                                        if let Some(t) = gpu.thermals.hw_max_operating_temp {
+                                            hw_rows.push((
+                                                "Max Operating",
+                                                format_temp(t, use_fahrenheit),
+                                            ));
+                                        }
+                                        if let Some(t) = gpu.thermals.hw_slowdown_temp {
+                                            hw_rows.push((
+                                                "Slowdown",
+                                                format_temp(t, use_fahrenheit),
+                                            ));
+                                        }
+                                        if let Some(t) = gpu.thermals.hw_shutdown_temp {
+                                            hw_rows.push((
+                                                "Shutdown",
+                                                format_temp(t, use_fahrenheit),
+                                            ));
+                                        }
+                                        if let Some(t) = gpu.thermals.hw_memory_max_temp {
+                                            hw_rows.push((
+                                                "Memory Max",
+                                                format_temp(t, use_fahrenheit),
+                                            ));
+                                        }
+                                        if !hw_rows.is_empty() {
+                                            draw_tooltip_section(ui, theme, "DRIVER LIMITS");
+                                            for (k, v) in hw_rows {
+                                                draw_tooltip_kv(
+                                                    ui,
+                                                    theme,
+                                                    None,
+                                                    k,
+                                                    &v,
+                                                    theme.text_primary,
+                                                    false,
+                                                );
+                                            }
+                                            ui.add_space(2.0);
+                                            ui.label(
+                                                egui::RichText::new("Source: Live GPU driver limits")
+                                                    .font(theme.font_body(10.0))
+                                                    .color(theme.text_muted),
+                                            );
+                                        } else {
+                                            ui.add_space(2.0);
+                                            ui.label(
+                                                egui::RichText::new(
+                                                    "Source: Architecture reference defaults",
+                                                )
                                                 .font(theme.font_body(10.0))
                                                 .color(theme.text_muted),
-                                        );
-                                    } else {
-                                        ui.add_space(4.0);
-                                        ui.label(
-                                            egui::RichText::new(
-                                                "Source: Architecture reference defaults",
-                                            )
-                                            .font(theme.font_body(10.0))
-                                            .color(theme.text_muted),
-                                        );
-                                    }
+                                            );
+                                        }
+                                    });
                                 });
 
                                 ui.with_layout(
@@ -696,52 +733,87 @@ pub fn draw_gpu_card(
                                             .color(theme.text_muted),
                                     )
                                     .on_hover_ui(|ui| {
-                                        ui.label(
-                                            egui::RichText::new(format!(
-                                                "{} TELEMETRY DETAILS",
-                                                gpu.vendor.label().to_ascii_uppercase()
-                                            ))
-                                            .font(theme.font_title(12.0))
-                                            .color(theme.accent_primary),
-                                        );
-                                        if let Some(m) = gpu.clocks.max_graphics_mhz {
-                                            ui.label(format!("Max Boost Clock: {m} MHz"));
-                                        }
-                                        if let Some(m) = gpu.clocks.memory_mhz {
-                                            ui.label(format!("Memory Clock: {m} MHz"));
-                                        }
-                                        if let Some(mu) = gpu.clocks.mem_util_pct {
-                                            ui.label(format!("Memory Controller Load: {mu}%"));
-                                        }
-                                        if let Some(sd) = gpu.thermals.hw_shutdown_temp {
-                                            ui.label(format!(
-                                                "HW Shutdown Threshold: {}",
-                                                format_temp(sd, use_fahrenheit)
-                                            ));
-                                        }
-                                        if !gpu.fans.per_fan_pct.is_empty() {
-                                            let fan_strs: Vec<String> = gpu
-                                                .fans
-                                                .per_fan_pct
-                                                .iter()
-                                                .enumerate()
-                                                .map(|(i, pct)| {
-                                                    match gpu
+                                        draw_tooltip_body(ui, 232.0, |ui| {
+                                            draw_tooltip_header(
+                                                ui,
+                                                theme,
+                                                &format!(
+                                                    "{} TELEMETRY",
+                                                    gpu.vendor.label().to_ascii_uppercase()
+                                                ),
+                                                None,
+                                            );
+                                            if let Some(m) = gpu.clocks.max_graphics_mhz {
+                                                draw_tooltip_kv(
+                                                    ui,
+                                                    theme,
+                                                    None,
+                                                    "Max Boost",
+                                                    &format!("{m} MHz"),
+                                                    theme.text_primary,
+                                                    false,
+                                                );
+                                            }
+                                            if let Some(m) = gpu.clocks.memory_mhz {
+                                                draw_tooltip_kv(
+                                                    ui,
+                                                    theme,
+                                                    None,
+                                                    "Memory Clock",
+                                                    &format!("{m} MHz"),
+                                                    theme.text_primary,
+                                                    false,
+                                                );
+                                            }
+                                            if let Some(mu) = gpu.clocks.mem_util_pct {
+                                                draw_tooltip_kv(
+                                                    ui,
+                                                    theme,
+                                                    None,
+                                                    "Mem Controller",
+                                                    &format!("{mu}%"),
+                                                    theme.text_primary,
+                                                    false,
+                                                );
+                                            }
+                                            if let Some(sd) = gpu.thermals.hw_shutdown_temp {
+                                                draw_tooltip_kv(
+                                                    ui,
+                                                    theme,
+                                                    None,
+                                                    "HW Shutdown",
+                                                    &format_temp(sd, use_fahrenheit),
+                                                    theme.status_critical,
+                                                    false,
+                                                );
+                                            }
+                                            if !gpu.fans.per_fan_pct.is_empty() {
+                                                draw_tooltip_section(ui, theme, "FANS");
+                                                for (i, pct) in
+                                                    gpu.fans.per_fan_pct.iter().enumerate()
+                                                {
+                                                    let val = match gpu
                                                         .fans
                                                         .per_fan_rpm
                                                         .get(i)
                                                         .copied()
                                                         .flatten()
                                                     {
-                                                        Some(r) => {
-                                                            format!("Fan {}: {pct}% ({r} RPM)", i + 1)
-                                                        }
-                                                        None => format!("Fan {}: {pct}%", i + 1),
-                                                    }
-                                                })
-                                                .collect();
-                                            ui.label(fan_strs.join(" | "));
-                                        }
+                                                        Some(r) => format!("{pct}% · {r} RPM"),
+                                                        None => format!("{pct}%"),
+                                                    };
+                                                    draw_tooltip_kv(
+                                                        ui,
+                                                        theme,
+                                                        None,
+                                                        &format!("Fan {}", i + 1),
+                                                        &val,
+                                                        theme.text_primary,
+                                                        false,
+                                                    );
+                                                }
+                                            }
+                                        });
                                     });
                                 });
 

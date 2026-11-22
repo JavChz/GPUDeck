@@ -711,6 +711,14 @@ impl ThemeSpec {
         font_value(size)
     }
 
+    pub fn font_mono(&self, size: f32) -> FontId {
+        font_mono(size)
+    }
+
+    pub fn font_mono_bold(&self, size: f32) -> FontId {
+        font_mono_bold(size)
+    }
+
     pub fn temp_colors(&self, level: MetricLevel) -> (Color32, Color32) {
         match level {
             MetricLevel::Healthy => self.gauge_healthy,
@@ -740,14 +748,6 @@ pub fn setup_fonts(ctx: &egui::Context) {
     let mut fonts = FontDefinitions::default();
 
     fonts.font_data.insert(
-        "barlow_semibold".to_owned(),
-        FontData::from_static(include_bytes!("../../assets/fonts/Barlow-SemiBold.ttf")).into(),
-    );
-    fonts.font_data.insert(
-        "barlow_bold".to_owned(),
-        FontData::from_static(include_bytes!("../../assets/fonts/Barlow-Bold.ttf")).into(),
-    );
-    fonts.font_data.insert(
         "inter_regular".to_owned(),
         FontData::from_static(include_bytes!("../../assets/fonts/Inter-Regular.ttf")).into(),
     );
@@ -759,12 +759,26 @@ pub fn setup_fonts(ctx: &egui::Context) {
         "inter_semibold".to_owned(),
         FontData::from_static(include_bytes!("../../assets/fonts/Inter-SemiBold.ttf")).into(),
     );
+    fonts.font_data.insert(
+        "inter_bold".to_owned(),
+        FontData::from_static(include_bytes!("../../assets/fonts/Inter-Bold.ttf")).into(),
+    );
+    fonts.font_data.insert(
+        "jb_mono".to_owned(),
+        FontData::from_static(include_bytes!("../../assets/fonts/JetBrainsMono-Regular.ttf"))
+            .into(),
+    );
+    fonts.font_data.insert(
+        "jb_mono_bold".to_owned(),
+        FontData::from_static(include_bytes!("../../assets/fonts/JetBrainsMono-Bold.ttf")).into(),
+    );
 
     if let Some(prop) = fonts.families.get_mut(&FontFamily::Proportional) {
         prop.insert(0, "inter_regular".to_owned());
     }
     if let Some(mono) = fonts.families.get_mut(&FontFamily::Monospace) {
-        mono.insert(0, "inter_regular".to_owned());
+        mono.insert(0, "jb_mono".to_owned());
+        mono.insert(1, "inter_regular".to_owned());
     }
 
     fonts.families.insert(
@@ -782,17 +796,25 @@ pub fn setup_fonts(ctx: &egui::Context) {
     fonts.families.insert(
         FontFamily::Name("title_semi".into()),
         vec![
-            "barlow_semibold".to_owned(),
-            "barlow_bold".to_owned(),
+            "inter_semibold".to_owned(),
+            "inter_bold".to_owned(),
             "inter_regular".to_owned(),
         ],
     );
     fonts.families.insert(
         FontFamily::Name("title".into()),
         vec![
-            "barlow_bold".to_owned(),
-            "barlow_semibold".to_owned(),
+            "inter_bold".to_owned(),
+            "inter_semibold".to_owned(),
             "inter_regular".to_owned(),
+        ],
+    );
+    fonts.families.insert(
+        FontFamily::Name("mono_bold".into()),
+        vec![
+            "jb_mono_bold".to_owned(),
+            "jb_mono".to_owned(),
+            "inter_semibold".to_owned(),
         ],
     );
 
@@ -860,6 +882,14 @@ pub fn font_ui(size: f32) -> FontId {
 
 pub fn font_value(size: f32) -> FontId {
     FontId::new(size, FontFamily::Name("ui_semibold".into()))
+}
+
+pub fn font_mono(size: f32) -> FontId {
+    FontId::new(size, FontFamily::Monospace)
+}
+
+pub fn font_mono_bold(size: f32) -> FontId {
+    FontId::new(size, FontFamily::Name("mono_bold".into()))
 }
 
 pub fn with_alpha(c: Color32, alpha: u8) -> Color32 {

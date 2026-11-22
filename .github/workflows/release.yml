@@ -99,12 +99,13 @@ jobs:
       - name: Build release binary
         run: cargo build --release --locked --target ${{ matrix.target }}
 
-      - name: Package Windows release archive
+      - name: Package Windows release archive & installer
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
           $tag = "${{ github.ref_name }}"
+          $ver = "${{ needs.verify.outputs.version }}"
           $target = "${{ matrix.target }}"
           $bin = "${{ matrix.bin }}"
           $pkgDir = "gpudeck-$tag-$target"
@@ -125,13 +126,54 @@ jobs:
           $shaFile = Join-Path (Resolve-Path "release") "$archive.sha256"
           [System.IO.File]::WriteAllText($shaFile, "$hash  $archive`n", [System.Text.UTF8Encoding]::new($false))
 
-      - name: Package Linux release archive
+          # Build Inno Setup next->next->finish installer
+          $iscc = (Get-Command iscc -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty Source)
+          foreach ($candidate in @(
+            "C:\Program Files (x86)\Inno Setup 6\ISCC.exe",
+            "C:\Program Files\Inno Setup 6\ISCC.exe"
+          )) {
+            if (-not $iscc -and (Test-Path $candidate)) {
+              $iscc = $candidate
+            }
+          }
+          if (-not $iscc) {
+            choco install innosetup -y
+            foreach ($candidate in @(
+              "C:\Program Files (x86)\Inno Setup 6\ISCC.exe",
+              "C:\Program Files\Inno Setup 6\ISCC.exe"
+            )) {
+              if (Test-Path $candidate) {
+                $iscc = $candidate
+                break
+              }
+            }
+          }
+          if (-not $iscc) {
+            throw "Inno Setup compiler (ISCC.exe) not found."
+          }
+
+          & $iscc "/DAppVersion=$ver" "/DAppTag=$tag" "installer\gpudeck.iss"
+          if ($LASTEXITCODE -ne 0) {
+            throw "ISCC failed with exit code $LASTEXITCODE"
+          }
+
+          $setupName = "GPUDeck-Setup-$tag-x86_64.exe"
+          $setupPath = Join-Path "release" $setupName
+          if (-not (Test-Path $setupPath)) {
+            throw "Expected installer not found at $setupPath"
+          }
+          $setupHash = (Get-FileHash -Path $setupPath -Algorithm SHA256).Hash.ToLowerInvariant()
+          $setupSha = Join-Path (Resolve-Path "release") "$setupName.sha256"
+          [System.IO.File]::WriteAllText($setupSha, "$setupHash  $setupName`n", [System.Text.UTF8Encoding]::new($false))
+
+      - name: Package Linux release archive & deb
         if: runner.os == 'Linux'
         shell: bash
         run: |
           set -euo pipefail
           "./target/${{ matrix.target }}/release/${{ matrix.bin }}" --version
 
+          VER="${{ needs.verify.outputs.version }}"
           PKG_DIR="gpudeck-${{ github.ref_name }}-${{ matrix.target }}"
           STAGE="dist/${PKG_DIR}"
           ARCHIVE="${PKG_DIR}.${{ matrix.archive_ext }}"
@@ -144,6 +186,39 @@ jobs:
 
           tar -czf "release/${ARCHIVE}" -C dist "${PKG_DIR}"
           (cd release && sha256sum "${ARCHIVE}" > "${ARCHIVE}.sha256")
+
+          # Build .deb package
+          DEB_VER="${VER//-/\~}"
+          DEB_NAME="gpudeck_${VER}_amd64.deb"
+          DEB_ROOT="dist/deb"
+          mkdir -p "${DEB_ROOT}/DEBIAN" "${DEB_ROOT}/usr/bin" "${DEB_ROOT}/usr/share/applications" "${DEB_ROOT}/usr/share/doc/gpudeck"
+          cp "target/${{ matrix.target }}/release/${{ matrix.bin }}" "${DEB_ROOT}/usr/bin/gpudeck"
+          chmod 0755 "${DEB_ROOT}/usr/bin/gpudeck"
+          cp LICENSE THIRD_PARTY_NOTICES.md README.md "${DEB_ROOT}/usr/share/doc/gpudeck/"
+
+          cat > "${DEB_ROOT}/usr/share/applications/gpudeck.desktop" <<'EOF'
+          [Desktop Entry]
+          Name=GPUDeck
+          Comment=Multi-GPU thermal, power limit, and throttling dashboard
+          Exec=/usr/bin/gpudeck
+          Terminal=false
+          Type=Application
+          Categories=System;Monitor;
+          EOF
+
+          cat > "${DEB_ROOT}/DEBIAN/control" <<EOF
+          Package: gpudeck
+          Version: ${DEB_VER}
+          Section: utils
+          Priority: optional
+          Architecture: amd64
+          Maintainer: Javier Garcia
+          Homepage: https://github.com/JavChz/GPUDeck
+          Description: Cross-platform multi-GPU thermal, power limit, and throttling dashboard
+          EOF
+
+          dpkg-deb --build --root-owner-group "${DEB_ROOT}" "release/${DEB_NAME}"
+          (cd release && sha256sum "${DEB_NAME}" > "${DEB_NAME}.sha256")
 
       - name: Upload release artifacts
         uses: actions/upload-artifact@v4
@@ -181,6 +256,8 @@ jobs:
           generate_release_notes: true
           prerelease: ${{ needs.verify.outputs.is_prerelease == 'true' }}
           files: |
+            release/*.exe
+            release/*.deb
             release/*.zip
             release/*.tar.gz
             release/SHA256SUMS.txt

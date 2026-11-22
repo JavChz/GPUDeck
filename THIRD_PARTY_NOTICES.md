@@ -13,6 +13,8 @@ All third-party libraries, font software, and referenced external code/interface
 | `egui` | `0.31.1` | `MIT OR Apache-2.0` | <https://github.com/emilk/egui> |
 | `nvml-wrapper` | `0.13.0` | `MIT OR Apache-2.0` | <https://github.com/Cldfire/nvml-wrapper> |
 | `serde` | `1.0.229` | `MIT OR Apache-2.0` | <https://github.com/serde-rs/serde> |
+| `ureq` | `2.12.1` | `MIT OR Apache-2.0` | <https://github.com/algesten/ureq> |
+| `sha2` | `0.10.9` | `MIT OR Apache-2.0` | <https://github.com/RustCrypto/hashes> |
 | `libloading` *(Windows)* | `0.8.9` | `ISC` | <https://github.com/nagisa/rust_libloading> |
 
 ---
@@ -26,6 +28,9 @@ All third-party libraries, font software, and referenced external code/interface
 | `arrayref` | `0.3.9` | `BSD-2-Clause` | <https://github.com/droundy/arrayref> |
 | `hexf-parse` | `0.2.1` | `CC0-1.0` | <https://github.com/lifthrasiir/hexf> |
 | `r-efi` | `5.3.0` / `6.0.0` | `MIT OR Apache-2.0 OR LGPL-2.1-or-later` | Used under permissive `MIT` / `Apache-2.0` license option (<https://github.com/r-efi/r-efi>) |
+| `ring` | `0.17.14` | `Apache-2.0 AND ISC` | <https://github.com/briansmith/ring> |
+| `rustls` | `0.23.46` | `Apache-2.0 OR ISC OR MIT` | <https://github.com/rustls/rustls> |
+| `webpki-roots` | `0.26.11` / `1.0.12` | `CDLA-Permissive-2.0` | <https://github.com/rustls/webpki-roots> |
 
 All remaining transitive Rust dependencies resolved in `Cargo.lock` are licensed under permissive licenses (`MIT`, `Apache-2.0`, `Zlib`, `BSL-1.0`, `Unicode-3.0`, `Unlicense`, or `0BSD`).
 
@@ -35,10 +40,10 @@ All remaining transitive Rust dependencies resolved in `Cargo.lock` are licensed
 
 The font files in `assets/fonts/` are licensed under the **SIL Open Font License, Version 1.1** — see [assets/fonts/OFL.txt](assets/fonts/OFL.txt):
 
-- **Barlow** (`Barlow-SemiBold.ttf`, `Barlow-Bold.ttf`)  
-  Copyright 2017 The Barlow Project Authors (<https://github.com/jpt/barlow>)
-- **Inter** (`Inter-Regular.ttf`, `Inter-Medium.ttf`, `Inter-SemiBold.ttf`)  
+- **Inter** (`Inter-Regular.ttf`, `Inter-Medium.ttf`, `Inter-SemiBold.ttf`, `Inter-Bold.ttf`)  
   Copyright 2020 The Inter Project Authors (<https://github.com/rsms/inter>)
+- **JetBrains Mono** (`JetBrainsMono-Regular.ttf`, `JetBrainsMono-Bold.ttf`)  
+  Copyright 2020 The JetBrains Mono Project Authors (<https://github.com/JetBrains/JetBrainsMono>)
 
 ---
 

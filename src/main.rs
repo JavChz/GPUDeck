@@ -3,6 +3,7 @@
 mod config;
 mod telemetry;
 mod ui;
+mod updater;
 
 use std::sync::Arc;
 
@@ -527,5 +528,47 @@ mod tests {
         let serialized = serialize_records(&records);
         let parsed = parse_records(&serialized);
         assert_eq!(parsed, records);
+    }
+
+    #[test]
+    fn test_semver_parsing_and_ordering() {
+        use super::updater::SemVer;
+
+        let v010 = SemVer::parse("0.1.0").unwrap();
+        let v020 = SemVer::parse("v0.2.0").unwrap();
+        let v0100 = SemVer::parse("V0.10.0").unwrap();
+        let beta = SemVer::parse("v0.2.0-beta.1").unwrap();
+        let rc = SemVer::parse("v0.2.0-rc.1").unwrap();
+
+        assert!(v020 > v010);
+        assert!(v0100 > v020);
+        assert!(v020 > beta);
+        assert!(rc > beta);
+        assert!(v020 > rc);
+        assert_eq!(SemVer::parse("v1.2.3+build.5").unwrap(), SemVer::parse("1.2.3").unwrap());
+        assert!(SemVer::parse("not-a-version").is_none());
+        assert!(SemVer::parse("0.1.0-").is_none());
+        assert!(SemVer::parse("1.2").is_none());
+    }
+
+    #[test]
+    fn test_sha256sums_parser() {
+        use super::updater::parse_sha256_for_file;
+
+        let sums = "\
+abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789  GPUDeck-Setup-v0.2.0-x86_64.exe
+1111111111111111111111111111111111111111111111111111111111111111 *gpudeck-v0.2.0-x86_64-pc-windows-msvc.zip
+deadbeef  bad-short.zip
+";
+        assert_eq!(
+            parse_sha256_for_file(sums, "GPUDeck-Setup-v0.2.0-x86_64.exe").as_deref(),
+            Some("abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789")
+        );
+        assert_eq!(
+            parse_sha256_for_file(sums, "gpudeck-v0.2.0-x86_64-pc-windows-msvc.zip").as_deref(),
+            Some("1111111111111111111111111111111111111111111111111111111111111111")
+        );
+        assert!(parse_sha256_for_file(sums, "bad-short.zip").is_none());
+        assert!(parse_sha256_for_file(sums, "missing.exe").is_none());
     }
 }

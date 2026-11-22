@@ -18,9 +18,11 @@ use widgets::{draw_header_bar, paint_ambient_backdrop};
 
 use crate::config::AppConfig;
 use crate::telemetry::TelemetryManager;
+use crate::updater::{open_url, UpdateManager, UpdateStatus, APP_AUTHOR, CURRENT_VERSION, REPO_URL};
 
 pub struct GpuDeckApp {
     telemetry: TelemetryManager,
+    updater: UpdateManager,
     config: AppConfig,
     theme: ThemeSpec,
     show_theme_menu: bool,
@@ -39,8 +41,10 @@ impl GpuDeckApp {
 
         let telemetry =
             TelemetryManager::start(config.poll_interval_ms, Some(cc.egui_ctx.clone()));
+        let updater = UpdateManager::start(Some(cc.egui_ctx.clone()));
         Self {
             telemetry,
+            updater,
             config,
             theme,
             show_theme_menu: false,
@@ -499,111 +503,350 @@ impl GpuDeckApp {
             .anchor(Align2::CENTER_CENTER, Vec2::ZERO)
             .auto_sized()
             .show(ctx, |ui| {
-                ui.set_width(536.0);
+                ui.set_width(546.0);
                 if draw_modal_header(
                     ui,
                     &self.theme,
-                    "THERMAL & POWER GUIDELINES",
-                    "Reference limits and power status definitions",
+                    "ABOUT & GUIDELINES",
+                    "Version info, updates, and safe thermal limits",
                 ) {
                     close_clicked = true;
                 }
 
-                ui.label(
-                    egui::RichText::new("SAFE OPERATING GUIDELINES")
-                        .font(self.theme.font_title_semi(11.0))
-                        .color(self.theme.accent_primary),
-                );
-                ui.add_space(6.0);
-
-                Frame::new()
-                    .fill(self.theme.bg_inner)
-                    .stroke(Stroke::new(1.0_f32, self.theme.border_subtle))
-                    .corner_radius(CornerRadius::same(self.theme.inner_radius.min(10)))
-                    .inner_margin(Margin::symmetric(12, 10))
+                egui::ScrollArea::vertical()
+                    .max_height(560.0)
+                    .auto_shrink([false, true])
                     .show(ui, |ui| {
-                        egui::Grid::new("guidelines_grid")
-                            .striped(true)
-                            .spacing([18.0, 7.0])
-                            .show(ui, |ui| {
-                                for h in ["SENSOR / VRAM", "HEALTHY", "WARM", "CRITICAL / MAX"] {
-                                    ui.label(
-                                        egui::RichText::new(h)
-                                            .font(self.theme.font_title_semi(10.5))
-                                            .color(self.theme.text_muted),
-                                    );
-                                }
-                                ui.end_row();
+                        ui.label(
+                            egui::RichText::new("ABOUT")
+                                .font(self.theme.font_title_semi(10.5))
+                                .color(self.theme.text_muted),
+                        );
+                        ui.add_space(6.0);
 
-                                let rows = [
-                                    ("GPU Core Temp", "< 80°C", "80 – 84°C", "≥ 85°C (Spec ~90–94°C)"),
-                                    ("GPU Hotspot (Junction)", "< 95°C", "95 – 105°C", "≥ 105°C (Max 110°C)"),
-                                    ("Hotspot - Core ΔT", "≤ 15°C", "15 – 18°C", "> 18°C (Paste check)"),
-                                    ("GDDR5 / GDDR6 VRAM", "< 85°C", "85 – 95°C", "≥ 95°C (Max 100°C)"),
-                                    ("GDDR6X (3080/3090/4070Ti+)", "< 95°C", "95 – 105°C", "≥ 105°C (Max 110°C)"),
-                                    ("GDDR7 (RTX 50 Series)", "< 90°C", "90 – 100°C", "≥ 100°C (Max 105°C)"),
-                                ];
-                                for (name, ok, warn, crit) in rows {
+                        Frame::new()
+                            .fill(self.theme.bg_inner)
+                            .stroke(Stroke::new(1.0_f32, self.theme.border_subtle))
+                            .corner_radius(CornerRadius::same(self.theme.inner_radius.min(10)))
+                            .inner_margin(Margin::symmetric(14, 12))
+                            .show(ui, |ui| {
+                                ui.horizontal(|ui| {
                                     ui.label(
-                                        egui::RichText::new(name)
-                                            .font(self.theme.font_ui(11.5))
+                                        egui::RichText::new("GPUDeck")
+                                            .font(self.theme.font_title(14.0))
                                             .color(self.theme.text_primary),
                                     );
-                                    ui.label(
-                                        egui::RichText::new(ok)
-                                            .font(self.theme.font_value(11.5))
-                                            .color(self.theme.status_healthy),
+                                    let ver_txt = format!("v{CURRENT_VERSION}");
+                                    let ver_galley = ui.painter().layout_no_wrap(
+                                        ver_txt.clone(),
+                                        self.theme.font_mono_bold(10.5),
+                                        self.theme.accent_primary,
                                     );
-                                    ui.label(
-                                        egui::RichText::new(warn)
-                                            .font(self.theme.font_value(11.5))
-                                            .color(self.theme.status_warm),
+                                    let (v_rect, _) = ui.allocate_exact_size(
+                                        Vec2::new(ver_galley.size().x + 12.0, 19.0),
+                                        Sense::hover(),
                                     );
-                                    ui.label(
-                                        egui::RichText::new(crit)
-                                            .font(self.theme.font_value(11.5))
-                                            .color(self.theme.status_critical),
+                                    let v_cr =
+                                        CornerRadius::same(self.theme.badge_radius.min(6).max(3));
+                                    ui.painter().rect_filled(
+                                        v_rect,
+                                        v_cr,
+                                        with_alpha(self.theme.accent_primary, 24),
                                     );
-                                    ui.end_row();
-                                }
+                                    ui.painter().rect_stroke(
+                                        v_rect,
+                                        v_cr,
+                                        Stroke::new(
+                                            0.9_f32,
+                                            with_alpha(self.theme.accent_primary, 130),
+                                        ),
+                                        StrokeKind::Inside,
+                                    );
+                                    ui.painter().galley(
+                                        Pos2::new(
+                                            v_rect.center().x - ver_galley.size().x * 0.5,
+                                            v_rect.center().y - ver_galley.size().y * 0.5,
+                                        ),
+                                        ver_galley,
+                                        self.theme.accent_primary,
+                                    );
+
+                                    ui.label(
+                                        egui::RichText::new(format!("by {APP_AUTHOR}"))
+                                            .font(self.theme.font_ui(11.5))
+                                            .color(self.theme.text_secondary),
+                                    );
+
+                                    ui.with_layout(
+                                        egui::Layout::right_to_left(egui::Align::Center),
+                                        |ui| {
+                                            if draw_modal_action_button(
+                                                ui,
+                                                &self.theme,
+                                                "GitHub ↗",
+                                                false,
+                                                false,
+                                            )
+                                            .clicked()
+                                            {
+                                                open_url(REPO_URL);
+                                            }
+                                            ui.label(
+                                                egui::RichText::new("MPL-2.0")
+                                                    .font(self.theme.font_mono(10.5))
+                                                    .color(self.theme.text_muted),
+                                            );
+                                        },
+                                    );
+                                });
+
+                                ui.add_space(8.0);
+                                let (div_r, _) = ui.allocate_exact_size(
+                                    Vec2::new(ui.available_width(), 1.0),
+                                    Sense::hover(),
+                                );
+                                ui.painter().line_segment(
+                                    [
+                                        Pos2::new(div_r.left(), div_r.center().y),
+                                        Pos2::new(div_r.right(), div_r.center().y),
+                                    ],
+                                    Stroke::new(
+                                        1.0_f32,
+                                        with_alpha(self.theme.border_subtle, 165),
+                                    ),
+                                );
+                                ui.add_space(8.0);
+
+                                let upd_status = self.updater.status();
+                                let (dot_col, status_txt, text_col) = match &upd_status {
+                                    UpdateStatus::Idle => (
+                                        self.theme.text_muted,
+                                        "Update check idle".to_string(),
+                                        self.theme.text_muted,
+                                    ),
+                                    UpdateStatus::Checking => (
+                                        self.theme.accent_primary,
+                                        "Checking GitHub for updates…".to_string(),
+                                        self.theme.text_secondary,
+                                    ),
+                                    UpdateStatus::UpToDate { latest_tag } => (
+                                        self.theme.status_healthy,
+                                        format!("Up to date ({latest_tag})"),
+                                        self.theme.text_primary,
+                                    ),
+                                    UpdateStatus::Available(info) => (
+                                        self.theme.accent_primary,
+                                        format!("Update available: {}", info.tag),
+                                        self.theme.text_primary,
+                                    ),
+                                    UpdateStatus::Downloading {
+                                        tag,
+                                        downloaded,
+                                        total,
+                                    } => {
+                                        let progress = match total {
+                                            Some(t) if *t > 0 => {
+                                                let pct = ((*downloaded as f64 / *t as f64) * 100.0)
+                                                    .clamp(0.0, 100.0);
+                                                format!("Downloading {tag}… {pct:.0}%")
+                                            }
+                                            _ => {
+                                                let mb = *downloaded as f64 / (1024.0 * 1024.0);
+                                                format!("Downloading {tag}… {mb:.1} MB")
+                                            }
+                                        };
+                                        (
+                                            self.theme.accent_primary,
+                                            progress,
+                                            self.theme.text_primary,
+                                        )
+                                    }
+                                    UpdateStatus::ReadyToRestart { tag } => (
+                                        self.theme.status_healthy,
+                                        format!("Launching {tag} installer…"),
+                                        self.theme.text_primary,
+                                    ),
+                                    UpdateStatus::Error(msg) => (
+                                        if msg.contains("No releases") {
+                                            self.theme.text_muted
+                                        } else {
+                                            self.theme.status_warm
+                                        },
+                                        msg.clone(),
+                                        self.theme.text_secondary,
+                                    ),
+                                };
+
+                                ui.horizontal(|ui| {
+                                    let (dot_r, _) =
+                                        ui.allocate_exact_size(Vec2::new(8.0, 16.0), Sense::hover());
+                                    ui.painter().circle_filled(dot_r.center(), 3.5, dot_col);
+                                    ui.label(
+                                        egui::RichText::new(status_txt)
+                                            .font(self.theme.font_ui(11.5))
+                                            .color(text_col),
+                                    );
+
+                                    ui.with_layout(
+                                        egui::Layout::right_to_left(egui::Align::Center),
+                                        |ui| match &upd_status {
+                                            UpdateStatus::Available(info) => {
+                                                if draw_modal_action_button(
+                                                    ui,
+                                                    &self.theme,
+                                                    "Release Notes",
+                                                    false,
+                                                    false,
+                                                )
+                                                .clicked()
+                                                {
+                                                    open_url(&info.html_url);
+                                                }
+                                                let install_lbl = if cfg!(target_os = "windows")
+                                                    && info.installer_url.is_some()
+                                                {
+                                                    "Download & Install"
+                                                } else {
+                                                    "Download Release"
+                                                };
+                                                if draw_modal_action_button(
+                                                    ui,
+                                                    &self.theme,
+                                                    install_lbl,
+                                                    true,
+                                                    false,
+                                                )
+                                                .clicked()
+                                                {
+                                                    self.updater.download_and_install(info.clone());
+                                                }
+                                            }
+                                            UpdateStatus::Checking
+                                            | UpdateStatus::Downloading { .. }
+                                            | UpdateStatus::ReadyToRestart { .. } => {
+                                                ui.label(
+                                                    egui::RichText::new("Working…")
+                                                        .font(self.theme.font_body(10.5))
+                                                        .color(self.theme.text_muted),
+                                                );
+                                            }
+                                            _ => {
+                                                if draw_modal_action_button(
+                                                    ui,
+                                                    &self.theme,
+                                                    "Check Updates",
+                                                    true,
+                                                    false,
+                                                )
+                                                .clicked()
+                                                {
+                                                    self.updater.check_now();
+                                                }
+                                            }
+                                        },
+                                    );
+                                });
                             });
+
+                        ui.add_space(12.0);
+                        ui.label(
+                            egui::RichText::new("SAFE OPERATING GUIDELINES")
+                                .font(self.theme.font_title_semi(11.0))
+                                .color(self.theme.accent_primary),
+                        );
+                        ui.add_space(6.0);
+
+                        Frame::new()
+                            .fill(self.theme.bg_inner)
+                            .stroke(Stroke::new(1.0_f32, self.theme.border_subtle))
+                            .corner_radius(CornerRadius::same(self.theme.inner_radius.min(10)))
+                            .inner_margin(Margin::symmetric(12, 10))
+                            .show(ui, |ui| {
+                                egui::Grid::new("guidelines_grid")
+                                    .striped(true)
+                                    .spacing([18.0, 7.0])
+                                    .show(ui, |ui| {
+                                        for h in
+                                            ["SENSOR / VRAM", "HEALTHY", "WARM", "CRITICAL / MAX"]
+                                        {
+                                            ui.label(
+                                                egui::RichText::new(h)
+                                                    .font(self.theme.font_title_semi(10.5))
+                                                    .color(self.theme.text_muted),
+                                            );
+                                        }
+                                        ui.end_row();
+
+                                        let rows = [
+                                            ("GPU Core Temp", "< 80°C", "80 – 84°C", "≥ 85°C (Spec ~90–94°C)"),
+                                            ("GPU Hotspot (Junction)", "< 95°C", "95 – 105°C", "≥ 105°C (Max 110°C)"),
+                                            ("Hotspot - Core ΔT", "≤ 15°C", "15 – 18°C", "> 18°C (Paste check)"),
+                                            ("GDDR5 / GDDR6 VRAM", "< 85°C", "85 – 95°C", "≥ 95°C (Max 100°C)"),
+                                            ("GDDR6X (3080/3090/4070Ti+)", "< 95°C", "95 – 105°C", "≥ 105°C (Max 110°C)"),
+                                            ("GDDR7 (RTX 50 Series)", "< 90°C", "90 – 100°C", "≥ 100°C (Max 105°C)"),
+                                        ];
+                                        for (name, ok, warn, crit) in rows {
+                                            ui.label(
+                                                egui::RichText::new(name)
+                                                    .font(self.theme.font_ui(11.5))
+                                                    .color(self.theme.text_primary),
+                                            );
+                                            ui.label(
+                                                egui::RichText::new(ok)
+                                                    .font(self.theme.font_mono(11.0))
+                                                    .color(self.theme.status_healthy),
+                                            );
+                                            ui.label(
+                                                egui::RichText::new(warn)
+                                                    .font(self.theme.font_mono(11.0))
+                                                    .color(self.theme.status_warm),
+                                            );
+                                            ui.label(
+                                                egui::RichText::new(crit)
+                                                    .font(self.theme.font_mono(11.0))
+                                                    .color(self.theme.status_critical),
+                                            );
+                                            ui.end_row();
+                                        }
+                                    });
+                            });
+
+                        ui.add_space(12.0);
+                        ui.label(
+                            egui::RichText::new("POWER & THROTTLING")
+                                .font(self.theme.font_title_semi(11.0))
+                                .color(self.theme.accent_secondary),
+                        );
+                        ui.add_space(4.0);
+                        for line in [
+                            "• Power 100% (No Software Limit): Enforced ceiling equals 100% of factory default TDP.",
+                            "• Software Limit (<99%): Driver/app lowered the power slider below factory TDP.",
+                            "• Thermal Throttling: Active HW or SW thermal slowdown reported directly by NVML/sysfs.",
+                        ] {
+                            ui.label(
+                                egui::RichText::new(line)
+                                    .font(self.theme.font_body(11.5))
+                                    .color(self.theme.text_secondary),
+                            );
+                        }
+
+                        ui.add_space(8.0);
+                        ui.label(
+                            egui::RichText::new(
+                                "Note: On Linux, NVIDIA's proprietary driver exposes Core and (on supported models) Memory temps, while Hotspot requires Windows NVAPI. Older GTX 10-series cards (e.g. GTX 1060) have no VRAM thermal diode.",
+                            )
+                            .font(self.theme.font_body(10.5))
+                            .color(self.theme.text_muted),
+                        );
+                        ui.add_space(6.0);
+                        ui.label(
+                            egui::RichText::new(
+                                "Disclaimer: Provided \"AS IS\" for informational monitoring only. Guidelines are general estimates; the author assumes no responsibility for overheating, burned/damaged GPUs, or inaccurate driver readings. Licensed under MPL-2.0.",
+                            )
+                            .font(self.theme.font_body(10.5))
+                            .color(self.theme.text_muted),
+                        );
                     });
-
-                ui.add_space(12.0);
-                ui.label(
-                    egui::RichText::new("POWER & THROTTLING")
-                        .font(self.theme.font_title_semi(11.0))
-                        .color(self.theme.accent_secondary),
-                );
-                ui.add_space(4.0);
-                for line in [
-                    "• Power 100% (No Software Limit): Enforced ceiling equals 100% of factory default TDP.",
-                    "• Software Limit (<99%): Driver/app lowered the power slider below factory TDP.",
-                    "• Thermal Throttling: Active HW or SW thermal slowdown reported directly by NVML/sysfs.",
-                ] {
-                    ui.label(
-                        egui::RichText::new(line)
-                            .font(self.theme.font_body(11.5))
-                            .color(self.theme.text_secondary),
-                    );
-                }
-
-                ui.add_space(8.0);
-                ui.label(
-                    egui::RichText::new(
-                        "Note: On Linux, NVIDIA's proprietary driver exposes Core and (on supported models) Memory temps, while Hotspot requires Windows NVAPI. Older GTX 10-series cards (e.g. GTX 1060) have no VRAM thermal diode.",
-                    )
-                    .font(self.theme.font_body(10.5))
-                    .color(self.theme.text_muted),
-                );
-                ui.add_space(6.0);
-                ui.label(
-                    egui::RichText::new(
-                        "Disclaimer: Provided \"AS IS\" for informational monitoring only. Guidelines are general estimates; the author assumes no responsibility for overheating, burned/damaged GPUs, or inaccurate driver readings. Licensed under MPL-2.0.",
-                    )
-                    .font(self.theme.font_body(10.5))
-                    .color(self.theme.text_muted),
-                );
             });
 
         if close_clicked {
@@ -652,6 +895,7 @@ impl eframe::App for GpuDeckApp {
                     self.show_theme_menu,
                     self.show_settings,
                     self.show_info,
+                    self.updater.has_update(),
                 );
                 if actions.theme_btn_rect != Rect::NOTHING {
                     self.theme_btn_rect = Some(actions.theme_btn_rect);
@@ -815,6 +1059,10 @@ impl eframe::App for GpuDeckApp {
         }
         if self.show_info {
             self.render_info_window(ctx);
+        }
+
+        if matches!(self.updater.status(), UpdateStatus::ReadyToRestart { .. }) {
+            ctx.send_viewport_cmd(egui::ViewportCommand::Close);
         }
 
         let repaint_ms = if any_throttling { 40 } else { 100 };

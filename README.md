@@ -69,7 +69,7 @@ Releases are automated via GitHub Actions ([`.github/workflows/release.yml`](.gi
    git push origin main --tags
    ```
    Pre-release tags containing a hyphen suffix (e.g., `v0.2.0-beta.1`) automatically publish as GitHub Pre-releases.
-3. The Release workflow verifies that the git tag matches `Cargo.toml`, builds Windows (`x86_64-pc-windows-msvc` `.zip`) and Linux (`x86_64-unknown-linux-gnu` `.tar.gz`) archives plus `SHA256SUMS.txt`, and creates the GitHub Release with generated release notes.
+3. The Release workflow verifies that the git tag matches `Cargo.toml`, builds a Windows Setup wizard (`GPUDeck-Setup-vX.Y.Z-x86_64.exe`), a Linux `.deb` package, and portable Windows (`.zip`) / Linux (`.tar.gz`) archives plus `SHA256SUMS.txt`, and publishes them to GitHub Releases. GPUDeck checks GitHub Releases automatically on launch (visible in the `(i)` About & Updates modal) and can download, SHA-256 verify, and launch the installer when a newer release is available.
 
 ## Disclaimer & Limitation of Liability
 
@@ -84,5 +84,5 @@ GPUDeck is provided **"AS IS"**, without warranty of any kind, express or implie
 Copyright (c) 2026 Javier Garcia
 
 - **Application Source Code:** Licensed under the **Mozilla Public License Version 2.0 (MPL-2.0)** — see [LICENSE](LICENSE).
-- **Bundled Font Software (`assets/fonts/`):** **Barlow** and **Inter** remain licensed under the **SIL Open Font License, Version 1.1** — see [assets/fonts/OFL.txt](assets/fonts/OFL.txt).
+- **Bundled Font Software (`assets/fonts/`):** **Inter** and **JetBrains Mono** remain licensed under the **SIL Open Font License, Version 1.1** — see [assets/fonts/OFL.txt](assets/fonts/OFL.txt).
 - **Third-Party Libraries & External Code Citations:** Full attributions for all Rust dependencies (`eframe`, `egui`, `nvml-wrapper`, `serde`, `libloading`, transitive crates) and referenced reverse-engineered NVAPI definitions from **LibreHardwareMonitor** (`MPL-2.0`) are documented in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

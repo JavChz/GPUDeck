@@ -62,6 +62,18 @@ cargo run -- --interval 500
 
 Releases are automated via GitHub Actions ([`.github/workflows/release.yml`](.github/workflows/release.yml)) using SemVer tags (`vX.Y.Z`):
 
+Using [`deploy.ps1`](deploy.ps1) (recommended on Windows — bumps version if requested, updates `Cargo.toml`, `Cargo.lock`, and `CHANGELOG.md`, runs tests & release build, commits, tags, and pushes):
+
+```powershell
+.\deploy.ps1 -DryRun      # Preview what will happen without changing files
+.\deploy.ps1 current      # Release the current Cargo.toml version
+.\deploy.ps1 patch        # Bump patch (e.g. 0.2.0 -> 0.2.1) and deploy
+.\deploy.ps1 minor        # Bump minor (e.g. 0.2.0 -> 0.3.0) and deploy
+.\deploy.ps1 0.3.0        # Set explicit SemVer version (or 0.3.0-beta.1 for pre-release) and deploy
+```
+
+Manual steps:
+
 1. Update `version` in `Cargo.toml` (for example `0.1.0`), run `cargo test` so `Cargo.lock` updates to match, and commit your changes.
 2. Create and push a matching version tag:
    ```bash
